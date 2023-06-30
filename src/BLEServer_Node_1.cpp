@@ -215,6 +215,7 @@ void loop() {
       jsonobject["NodeID"] = node_asal;
       jsonobject["Suhu"] = suhu;
       jsonobject["Kelembapan"] = kelembapan;
+      datakirim = "";
       serializeJson(doc, datakirim);
       char kirim_loop[datakirim.length() + 1];
       datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
@@ -265,6 +266,7 @@ void loop() {
       jsonobject1["NodeID"] = node_asal;
       jsonobject1["Suhu"] = suhu;
       jsonobject1["Kelembapan"] = kelembapan;
+      datakirim = "";
       serializeJson(doc, datakirim);
       char kirim_loop[datakirim.length() + 1];
       datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
@@ -309,6 +311,7 @@ void loop() {
       jsonobject1["NodeID"] = node_asal;
       jsonobject1["Suhu"] = suhu;
       jsonobject1["Kelembapan"] = kelembapan;
+      datakirim = "";
       serializeJson(doc, datakirim);
       char kirim_loop[datakirim.length() + 1];
       datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
@@ -353,6 +356,7 @@ void loop() {
       jsonobject1["NodeID"] = node_asal;
       jsonobject1["Suhu"] = suhu;
       jsonobject1["Kelembapan"] = kelembapan;
+      datakirim = "";
       serializeJson(doc, datakirim);
       char kirim_loop[datakirim.length() + 1];
       datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
@@ -405,6 +409,7 @@ void loop() {
         jsonobject2["NodeID"] = node_asal;
         jsonobject2["Suhu"] = suhu;
         jsonobject2["Kelembapan"] = kelembapan;
+        datakirim = "";
         serializeJson(doc, datakirim);
         char kirim_loop[datakirim.length() + 1];
         datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
@@ -440,6 +445,7 @@ void loop() {
         jsonobject2["NodeID"] = node_asal;
         jsonobject2["Suhu"] = suhu;
         jsonobject2["Kelembapan"] = kelembapan;
+        datakirim = "";
         serializeJson(doc, datakirim);
         char kirim_loop[datakirim.length() + 1];
         datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
@@ -475,6 +481,7 @@ void loop() {
         jsonobject2["NodeID"] = node_asal;
         jsonobject2["Suhu"] = suhu;
         jsonobject2["Kelembapan"] = kelembapan;
+        datakirim = "";
         serializeJson(doc, datakirim);
         char kirim_loop[datakirim.length() + 1];
         datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
@@ -510,6 +517,7 @@ void loop() {
         jsonobject2["NodeID"] = node_asal;
         jsonobject2["Suhu"] = suhu;
         jsonobject2["Kelembapan"] = kelembapan;
+        datakirim = "";
         serializeJson(doc, datakirim);
         char kirim_loop[datakirim.length() + 1];
         datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
@@ -549,6 +557,7 @@ void loop() {
         jsonobject2["NodeID"] = node_asal;
         jsonobject2["Suhu"] = suhu;
         jsonobject2["Kelembapan"] = kelembapan;
+        datakirim = "";
         serializeJson(doc, datakirim);
         char kirim_loop[datakirim.length() + 1];
         datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
@@ -588,6 +597,7 @@ void loop() {
         jsonobject2["NodeID"] = node_asal;
         jsonobject2["Suhu"] = suhu;
         jsonobject2["Kelembapan"] = kelembapan;
+        datakirim = "";
         serializeJson(doc, datakirim);
         char kirim_loop[datakirim.length() + 1];
         datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
@@ -637,6 +647,7 @@ void loop() {
         jsonobject3["NodeID"] = node_asal;
         jsonobject3["Suhu"] = suhu;
         jsonobject3["Kelembapan"] = kelembapan;
+        datakirim = "";
         serializeJson(doc, datakirim);
         char kirim_loop[datakirim.length() + 1];
         datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
@@ -682,6 +693,7 @@ void loop() {
         jsonobject3["NodeID"] = node_asal;
         jsonobject3["Suhu"] = suhu;
         jsonobject3["Kelembapan"] = kelembapan;
+        datakirim = "";
         serializeJson(doc, datakirim);
         char kirim_loop[datakirim.length() + 1];
         datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
@@ -727,6 +739,7 @@ void loop() {
         jsonobject3["NodeID"] = node_asal;
         jsonobject3["Suhu"] = suhu;
         jsonobject3["Kelembapan"] = kelembapan;
+        datakirim = "";
         serializeJson(doc, datakirim);
         char kirim_loop[datakirim.length() + 1];
         datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
@@ -772,6 +785,7 @@ void loop() {
         jsonobject3["NodeID"] = node_asal;
         jsonobject3["Suhu"] = suhu;
         jsonobject3["Kelembapan"] = kelembapan;
+        datakirim = "";
         serializeJson(doc, datakirim);
         char kirim_loop[datakirim.length() + 1];
         datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
@@ -817,6 +831,7 @@ void loop() {
         jsonobject3["NodeID"] = node_asal;
         jsonobject3["Suhu"] = suhu;
         jsonobject3["Kelembapan"] = kelembapan;
+        datakirim = "";
         serializeJson(doc, datakirim);
         char kirim_loop[datakirim.length() + 1];
         datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
@@ -862,6 +877,7 @@ void loop() {
         jsonobject3["NodeID"] = node_asal;
         jsonobject3["Suhu"] = suhu;
         jsonobject3["Kelembapan"] = kelembapan;
+        datakirim = "";
         serializeJson(doc, datakirim);
         char kirim_loop[datakirim.length() + 1];
         datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));

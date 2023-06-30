@@ -1,0 +1,773 @@
+#include <Arduino.h>
+
+//library Json
+#include <ArduinoJson.h>
+
+//Librari NRF24L01
+#include <SPI.h>
+#include <RF24.h>
+#include <RF24Network.h>
+#include "printf.h"
+
+//Library BLE
+#include <BLEDevice.h>
+#include <BLEUtils.h>
+#include <BLEScan.h>
+#include <BLEAdvertisedDevice.h>
+
+//Konfigurasi BLE
+#define SERVICE_UUID "17f520e2-b521-4d69-8e1c-88a11fe6e257"
+#define CHARACTERISTIC_UUID "c8236411-738f-4b1c-8913-85599c76237f"
+
+//konfigurasi NRF24L01
+RF24 radio(4, 5); //(pin CE, pin CSN)
+RF24Network network(radio); // Network uses that radio
+uint8_t dataBuffer[MAX_PAYLOAD_SIZE];  //MAX_PAYLOAD_SIZE is defined in RF24Network_config.h
+
+//alamat node
+const uint16_t this_node = 00;   // alamat node ini (NODE_1) dalam format Octal
+const uint16_t NODE_2 = 01;  // alamat NODE_2 dalam format Octal
+const uint16_t NODE_3 = 02;  // alamat NODE_3 dalam format Octal
+const uint16_t NODE_4 = 03;  // alamat NODE_4 dalam format Octal
+const uint16_t NODE_5 = 04;  // alamat NODE_5 dalam format Octal
+
+//variabel DATA
+int node_asal = 1; //data node
+unsigned long suhu = 12;  //data suhu
+unsigned long kelembapan = 90; //data kelembapan
+String datakirim; //data Json yang akan dikirim
+String dataterima; //data Json yang diterima
+int count = 0; //Variabel count utuk menghitung data pada data Json
+int jumlahnode[5]; //array berisi NodeID
+
+//variabel millis
+unsigned long previousTime = 0; // Waktu sebelumnya
+unsigned long intervalmillis = 10000; // Interval waktu (dalam milidetik)
+
+//variabel RSSI node
+int NODE_2_RSSI;
+int NODE_3_RSSI;
+int NODE_4_RSSI;
+int NODE_5_RSSI;
+
+//variabel case
+int pilihan = 1;
+
+//variabel BLE
+int scanTime = 1; //In seconds
+
+//Fungsi untuk 2 loop
+//TaskHandle_t Task1;
+
+//konfigurasi fungsi scan RSSI BLE
+BLEScan* pBLEScan;
+class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
+    void onResult(BLEAdvertisedDevice advertisedDevice) {
+      if (advertisedDevice.getName() == "NODE_2")
+      {
+        NODE_2_RSSI = advertisedDevice.getRSSI();
+      }
+      if (advertisedDevice.getName() == "NODE_3")
+      {
+        NODE_3_RSSI = advertisedDevice.getRSSI();
+      }
+      if (advertisedDevice.getName() == "NODE_4")
+      {
+        NODE_4_RSSI = advertisedDevice.getRSSI();
+      }
+      if (advertisedDevice.getName() == "NODE_5")
+      {
+        NODE_5_RSSI = advertisedDevice.getRSSI();
+      }
+      //Serial.printf("Advertised Device: %s \n", advertisedDevice.toString().c_str());
+    }
+};
+
+//program loop 2
+//void loop2( void * parameter) {
+//  for (;;) {
+//    unsigned long currentTime = millis(); // Waktu saat ini
+//
+//    if (currentTime - previousTime >= intervalmillis) {
+//      previousTime = currentTime; // Perbarui waktu sebelumnya
+//      Serial.println("MODE : SCANNING......");
+//      BLEScanResults foundDevices = pBLEScan->start(scanTime, false);
+//      Serial.print("RSSI NODE 2 : " + String(NODE_2_RSSI));
+//      Serial.println(" || RSSI NODE 3 : " + String(NODE_3_RSSI));
+//    }
+//  }
+//}
+
+void setup() {
+  Serial.begin(115200);
+  StaticJsonDocument<512> doc; // buat document Json
+
+  //Fungsi untuk 2 loop
+  //  xTaskCreatePinnedToCore(
+  //    loop2,
+  //    "BLE_SCANNING",
+  //    1000,
+  //    NULL,
+  //    1,
+  //    &Task1,
+  //    0);
+
+  //fungsi setup untuk NRF24L01
+  while (!Serial) {
+    // some boards need this because of native USB capability
+  }
+  Serial.println(F("RF24Network/examples/helloworld_tx/"));
+
+  if (!radio.begin()) {
+    Serial.println(F("Radio hardware not responding!"));
+    while (1) {
+      // hold in infinite loop
+    }
+  }
+  radio.setChannel(90);
+  network.begin(/*node address*/ this_node);
+  printf_begin();        // needed for RF24* libs' internal printf() calls
+  radio.printDetails();  // requires printf support
+
+  //BLE
+  BLEDevice::init("NODE_1");
+  BLEServer *pServer = BLEDevice::createServer();
+  BLEService *pService = pServer ->createService(SERVICE_UUID);
+  BLECharacteristic *pCharacteristic = pService->createCharacteristic(
+                                         CHARACTERISTIC_UUID,
+                                         BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE);
+
+  pCharacteristic->setValue("Hello this is NODE 1");
+  pService->start();
+  BLEDevice::startAdvertising();
+  Serial.println("BLE READY!!!");
+
+  pBLEScan = BLEDevice::getScan(); //create new scan
+  pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
+  pBLEScan->setActiveScan(true); //active scan uses more power, but get results faster
+  pBLEScan->setInterval(100);
+  pBLEScan->setWindow(99);  // less or equal setInterval value
+
+  //scan BLE
+  Serial.println("SCANNING......");
+  BLEScanResults foundDevices = pBLEScan->start(scanTime, false);
+  Serial.print("RSSI NODE 2 : " + String(NODE_2_RSSI));
+  Serial.print(" || RSSI NODE 3 : " + String(NODE_3_RSSI));
+  Serial.print(" || RSSI NODE 4 : " + String(NODE_4_RSSI));
+  Serial.println(" || RSSI NODE 5 : " + String(NODE_5_RSSI));
+}
+
+void loop() {
+  network.update();  // Check the network regularly
+  StaticJsonDocument<512> doc; // Json Document
+
+  //scan ble
+  unsigned long currentTime = millis(); // Waktu saat ini
+
+  // if (currentTime - previousTime >= intervalmillis) {
+  //   previousTime = currentTime; // Perbarui waktu sebelumnya
+  //   Serial.println("MODE : SCANNING......");
+  //   BLEScanResults foundDevices = pBLEScan->start(scanTime, false);
+  //   Serial.print("RSSI NODE 2 : " + String(NODE_2_RSSI));
+  //   Serial.print(" || RSSI NODE 3 : " + String(NODE_3_RSSI));
+  //   Serial.print(" || RSSI NODE 4 : " + String(NODE_4_RSSI));
+  //   Serial.println(" || RSSI NODE 5 : " + String(NODE_5_RSSI));
+  // }
+
+  while (network.available()) {
+    RF24NetworkHeader header;  // If so, grab it and print it out
+    uint16_t payloadSize = network.peek(header);     // Use peek() to get the size of the payload
+    char terima_loop[payloadSize]; //buat variabel untuk nerima data array
+    network.read(header, &terima_loop, payloadSize);  // Get the data
+    dataterima = "";
+    for (uint32_t i = 0; i < payloadSize; i++){
+      dataterima += terima_loop[i];
+    }
+    Serial.println(dataterima);
+    DeserializationError error = deserializeJson(doc, dataterima);
+
+    if (error) {
+      Serial.print("deserializeJson() failed: ");
+      Serial.println(error.c_str());
+      return;
+    }
+
+    for (int i = 0; i <= 4; i++) {
+      jumlahnode[i] = NULL;
+      count = 0;
+    }
+    for (int i = 0; i <= 4; i++) {
+      JsonObject parsing = doc[i];
+      int NodeID = parsing["NodeID"];
+      if (NodeID != 0) {
+        count++;
+        jumlahnode[i] += NodeID;
+      }
+    }
+//==================================================POSISI NODE KE - 1==================================================
+    if (count == 1 && jumlahnode[0] == 5) {
+      Serial.print("Received packet from NODE 5");
+      JsonArray jsonarray = doc.to<JsonArray>();
+      JsonObject jsonobject = jsonarray.createNestedObject();
+      jsonobject["NodeID"] = node_asal;
+      jsonobject["Suhu"] = suhu;
+      jsonobject["Kelembapan"] = kelembapan;
+      serializeJson(doc, datakirim);
+      char kirim_loop[datakirim.length() + 1];
+      datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
+      BLEScanResults foundDevices = pBLEScan->start(scanTime, false);
+      network.update();
+      if (NODE_2_RSSI > NODE_3_RSSI && NODE_2_RSSI > NODE_4_RSSI) {
+        RF24NetworkHeader header(/*to node*/ NODE_2);
+        bool NODE_2 = network.write(header, &kirim_loop, sizeof(kirim_loop));
+        Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+      }
+      if (NODE_3_RSSI > NODE_2_RSSI && NODE_3_RSSI > NODE_4_RSSI) {
+        RF24NetworkHeader header(/*to node*/ NODE_3);
+        bool NODE_3 = network.write(header, &kirim_loop, sizeof(kirim_loop));
+        Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+      }
+      if (NODE_4_RSSI > NODE_2_RSSI && NODE_4_RSSI > NODE_3_RSSI) {
+        RF24NetworkHeader header(/*to node*/ NODE_4);
+        bool NODE_4 = network.write(header, &kirim_loop, sizeof(kirim_loop));
+        Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+      }
+    }
+//==================================================POSISI NODE KE - 2==================================================
+    if (count == 1 && jumlahnode[0] == 2) {
+      Serial.print("Received packet from NODE 2");
+      JsonObject NodeID_2 = doc[0];
+      int aNodeID_2 = NodeID_2["NodeID"];
+      int Berat = NodeID_2["Berat"];
+      JsonArray jsonarray = doc.to<JsonArray>();
+      JsonObject jsonobject = jsonarray.createNestedObject();
+      jsonobject["NodeID"] = aNodeID_2;
+      jsonobject["Berat"] = Berat;
+      JsonObject jsonobject1 = jsonarray.createNestedObject();
+      jsonobject1["NodeID"] = node_asal;
+      jsonobject1["Suhu"] = suhu;
+      jsonobject1["Kelembapan"] = kelembapan;
+      serializeJson(doc, datakirim);
+      char kirim_loop[datakirim.length() + 1];
+      datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
+      BLEScanResults foundDevices = pBLEScan->start(scanTime, false);
+      if (NODE_3_RSSI > NODE_4_RSSI) {
+        network.update();
+        RF24NetworkHeader header(/*to node*/ NODE_3);
+        bool NODE_3 = network.write(header, &kirim_loop, sizeof(kirim_loop));
+        Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+      }
+      if (NODE_4_RSSI > NODE_3_RSSI) {
+        network.update();
+        RF24NetworkHeader header(/*to node*/ NODE_4);
+        bool NODE_4 = network.write(header, &kirim_loop, sizeof(kirim_loop));
+        Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+      }
+    }
+    if (count == 1 && jumlahnode[0] == 3) {
+      Serial.print("Received packet from NODE 3");
+      JsonObject NodeID_3 = doc[0];
+      int aNodeID_3 = NodeID_3["NodeID"];
+      int Pitch = NodeID_3["Pitch"];
+      int Roll = NodeID_3["Roll"];
+      int Frekuensi = NodeID_3["Frekuensi"];
+      JsonArray jsonarray = doc.to<JsonArray>();
+      JsonObject jsonobject = jsonarray.createNestedObject();
+      jsonobject["NodeID"] = aNodeID_3;
+      jsonobject["Pitch"] = Pitch;
+      jsonobject["Roll"] = Roll;
+      jsonobject["Frekuensi"] = Frekuensi;
+      JsonObject jsonobject1 = jsonarray.createNestedObject();
+      jsonobject1["NodeID"] = node_asal;
+      jsonobject1["Suhu"] = suhu;
+      jsonobject1["Kelembapan"] = kelembapan;
+      serializeJson(doc, datakirim);
+      char kirim_loop[datakirim.length() + 1];
+      datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
+      BLEScanResults foundDevices = pBLEScan->start(scanTime, false);
+      if (NODE_2_RSSI > NODE_4_RSSI) {
+        network.update();
+        RF24NetworkHeader header(/*to node*/ NODE_2);
+        bool NODE_2 = network.write(header, &kirim_loop, sizeof(kirim_loop));
+        Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+      }
+      if (NODE_4_RSSI > NODE_2_RSSI) {
+        network.update();
+        RF24NetworkHeader header(/*to node*/ NODE_4);
+        bool NODE_4 = network.write(header, &kirim_loop, sizeof(kirim_loop));
+        Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+      }
+    }
+    if (count == 1 && jumlahnode[0] == 4) {
+      Serial.print("Received packet from NODE 4");
+      JsonObject NodeID_4 = doc[0];
+      int aNodeID_4 = NodeID_4["NodeID"];
+      int TofX = NodeID_4["TofX"];
+      int TofY = NodeID_4["TofY"];
+      int TofZ = NodeID_4["TofZ"];
+      JsonArray jsonarray = doc.to<JsonArray>();
+      JsonObject jsonobject = jsonarray.createNestedObject();
+      jsonobject["NodeID"] = aNodeID_4;
+      jsonobject["TofX"] = TofX;
+      jsonobject["TofY"] = TofY;
+      jsonobject["TofZ"] = TofZ;
+      JsonObject jsonobject1 = jsonarray.createNestedObject();
+      jsonobject1["NodeID"] = node_asal;
+      jsonobject1["Suhu"] = suhu;
+      jsonobject1["Kelembapan"] = kelembapan;
+      serializeJson(doc, datakirim);
+      char kirim_loop[datakirim.length() + 1];
+      datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
+      BLEScanResults foundDevices = pBLEScan->start(scanTime, false);
+      if (NODE_2_RSSI > NODE_3_RSSI) {
+        network.update();
+        RF24NetworkHeader header(/*to node*/ NODE_2);
+        bool NODE_2 = network.write(header, &kirim_loop, sizeof(kirim_loop));
+        Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+      }
+      if (NODE_3_RSSI > NODE_2_RSSI) {
+        network.update();
+        RF24NetworkHeader header(/*to node*/ NODE_3);
+        bool NODE_3 = network.write(header, &kirim_loop, sizeof(kirim_loop));
+        Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+      }
+    }
+//==================================================POSISI NODE KE - 3==================================================
+    if (count == 2) {
+      Serial.print("Received packet from NODE " + jumlahnode[1]);
+      if (jumlahnode[0] == 2 && jumlahnode[1] == 3) {
+        JsonObject NodeID_2 = doc[0];
+        int bNodeID_2 = NodeID_2["NodeID"];
+        int Berat = NodeID_2["Berat"];
+        JsonObject NodeID_3 = doc[1];
+        int bNodeID_3 = NodeID_3["NodeID"];
+        int Pitch = NodeID_3["Pitch"];
+        int Roll = NodeID_3["Roll"];
+        int Frekuensi = NodeID_3["Frekuensi"];
+        JsonArray jsonarray = doc.to<JsonArray>();
+        JsonObject jsonobject = jsonarray.createNestedObject();
+        jsonobject["NodeID"] = bNodeID_2;
+        jsonobject["Berat"] = Berat;
+        JsonObject jsonobject1 = jsonarray.createNestedObject();
+        jsonobject1["NodeID"] = bNodeID_3;
+        jsonobject1["Pitch"] = Pitch;
+        jsonobject1["Roll"] = Roll;
+        jsonobject1["Frekuensi"] = Frekuensi;
+        JsonObject jsonobject2 = jsonarray.createNestedObject();
+        jsonobject2["NodeID"] = node_asal;
+        jsonobject2["Suhu"] = suhu;
+        jsonobject2["Kelembapan"] = kelembapan;
+        serializeJson(doc, datakirim);
+        char kirim_loop[datakirim.length() + 1];
+        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
+        network.update();
+        RF24NetworkHeader header(/*to node*/ NODE_4);
+        bool NODE_4 = network.write(header, &kirim_loop, sizeof(kirim_loop));
+        Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+      }
+      if (jumlahnode[0] == 3 && jumlahnode[1] == 2) {
+        JsonObject NodeID_3 = doc[0];
+        int cNodeID_3 = NodeID_3["NodeID"];
+        int Pitch = NodeID_3["Pitch"];
+        int Roll = NodeID_3["Roll"];
+        int Frekuensi = NodeID_3["Frekuensi"];
+        JsonObject NodeID_2 = doc[1];
+        int cNodeID_2 = NodeID_2["NodeID"];
+        int Berat = NodeID_2["Berat"];
+        JsonArray jsonarray = doc.to<JsonArray>();
+        JsonObject jsonobject = jsonarray.createNestedObject();
+        jsonobject["NodeID"] = cNodeID_3;
+        jsonobject["Pitch"] = Pitch;
+        jsonobject["Roll"] = Roll;
+        jsonobject["Frekuensi"] = Frekuensi;
+        JsonObject jsonobject1 = jsonarray.createNestedObject();
+        jsonobject1["NodeID"] = cNodeID_2;
+        jsonobject1["Berat"] = Berat;
+        JsonObject jsonobject2 = jsonarray.createNestedObject();
+        jsonobject2["NodeID"] = node_asal;
+        jsonobject2["Suhu"] = suhu;
+        jsonobject2["Kelembapan"] = kelembapan;
+        serializeJson(doc, datakirim);
+        char kirim_loop[datakirim.length() + 1];
+        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
+        network.update();
+        RF24NetworkHeader header(/*to node*/ NODE_4);
+        bool NODE_4 = network.write(header, &kirim_loop, sizeof(kirim_loop));
+        Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+      }
+      if (jumlahnode[0] == 2 && jumlahnode[1] == 4) {
+        JsonObject NodeID_2 = doc[0];
+        int dNodeID_2 = NodeID_2["NodeID"];
+        int Berat = NodeID_2["Berat"];
+        JsonObject NodeID_4 = doc[1];
+        int bNodeID_4 = NodeID_4["NodeID"];
+        int TofX = NodeID_4["TofX"];
+        int TofY = NodeID_4["TofY"];
+        int TofZ = NodeID_4["TofZ"];
+        JsonArray jsonarray = doc.to<JsonArray>();
+        JsonObject jsonobject = jsonarray.createNestedObject();
+        jsonobject["NodeID"] = dNodeID_2;
+        jsonobject["Berat"] = Berat;
+        JsonObject jsonobject1 = jsonarray.createNestedObject();
+        jsonobject1["NodeID"] = bNodeID_4;
+        jsonobject1["TofX"] = TofX;
+        jsonobject1["TofY"] = TofY;
+        jsonobject1["TofZ"] = TofZ;
+        JsonObject jsonobject2 = jsonarray.createNestedObject();
+        jsonobject2["NodeID"] = node_asal;
+        jsonobject2["Suhu"] = suhu;
+        jsonobject2["Kelembapan"] = kelembapan;
+        serializeJson(doc, datakirim);
+        char kirim_loop[datakirim.length() + 1];
+        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
+        network.update();
+        RF24NetworkHeader header(/*to node*/ NODE_3);
+        bool NODE_3 = network.write(header, &kirim_loop, sizeof(kirim_loop));
+        Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+      }
+      if (jumlahnode[0] == 4 && jumlahnode[1] == 2) {
+        JsonObject NodeID_4 = doc[0];
+        int cNodeID_4 = NodeID_4["NodeID"];
+        int TofX = NodeID_4["TofX"];
+        int TofY = NodeID_4["TofY"];
+        int TofZ = NodeID_4["TofZ"];
+        JsonObject NodeID_2 = doc[1];
+        int eNodeID_2 = NodeID_2["NodeID"];
+        int Berat = NodeID_2["Berat"];
+        JsonArray jsonarray = doc.to<JsonArray>();
+        JsonObject jsonobject = jsonarray.createNestedObject();
+        jsonobject["NodeID"] = cNodeID_4;
+        jsonobject["TofX"] = TofX;
+        jsonobject["TofY"] = TofY;
+        jsonobject["TofZ"] = TofZ;
+        JsonObject jsonobject1 = jsonarray.createNestedObject();
+        jsonobject1["NodeID"] = eNodeID_2;
+        jsonobject1["Berat"] = Berat;
+        JsonObject jsonobject2 = jsonarray.createNestedObject();
+        jsonobject2["NodeID"] = node_asal;
+        jsonobject2["Suhu"] = suhu;
+        jsonobject2["Kelembapan"] = kelembapan;
+        serializeJson(doc, datakirim);
+        char kirim_loop[datakirim.length() + 1];
+        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
+        network.update();
+        RF24NetworkHeader header(/*to node*/ NODE_3);
+        bool NODE_3 = network.write(header, &kirim_loop, sizeof(kirim_loop));
+        Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+      }
+      if (jumlahnode[0] == 4 && jumlahnode[1] == 3) {
+        JsonObject NodeID_4 = doc[0];
+        int dNodeID_4 = NodeID_4["NodeID"];
+        int TofX = NodeID_4["TofX"];
+        int TofY = NodeID_4["TofY"];
+        int TofZ = NodeID_4["TofZ"];
+        JsonObject NodeID_3 = doc[1];
+        int dNodeID_3 = NodeID_3["NodeID"];
+        int Pitch = NodeID_3["Pitch"];
+        int Roll = NodeID_3["Roll"];
+        int Frekuensi = NodeID_3["Frekuensi"];
+        JsonArray jsonarray = doc.to<JsonArray>();
+        JsonObject jsonobject = jsonarray.createNestedObject();
+        jsonobject["NodeID"] = dNodeID_4;
+        jsonobject["TofX"] = TofX;
+        jsonobject["TofY"] = TofY;
+        jsonobject["TofZ"] = TofZ;
+        JsonObject jsonobject1 = jsonarray.createNestedObject();
+        jsonobject1["NodeID"] = dNodeID_3;
+        jsonobject1["Pitch"] = Pitch;
+        jsonobject1["Roll"] = Roll;
+        jsonobject1["Frekuensi"] = Frekuensi;
+        JsonObject jsonobject2 = jsonarray.createNestedObject();
+        jsonobject2["NodeID"] = node_asal;
+        jsonobject2["Suhu"] = suhu;
+        jsonobject2["Kelembapan"] = kelembapan;
+        serializeJson(doc, datakirim);
+        char kirim_loop[datakirim.length() + 1];
+        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
+        network.update();
+        RF24NetworkHeader header(/*to node*/ NODE_2);
+        bool NODE_2 = network.write(header, &kirim_loop, sizeof(kirim_loop));
+        Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+      }
+      if (jumlahnode[0] == 3 && jumlahnode[1] == 4) {
+        JsonObject NodeID_3 = doc[0];
+        int eNodeID_3 = NodeID_3["NodeID"];
+        int Pitch = NodeID_3["Pitch"];
+        int Roll = NodeID_3["Roll"];
+        int Frekuensi = NodeID_3["Frekuensi"];
+        JsonObject NodeID_4 = doc[1];
+        int eNodeID_4 = NodeID_4["NodeID"];
+        int TofX = NodeID_4["TofX"];
+        int TofY = NodeID_4["TofY"];
+        int TofZ = NodeID_4["TofZ"];
+        JsonArray jsonarray = doc.to<JsonArray>();
+        JsonObject jsonobject = jsonarray.createNestedObject();
+        jsonobject["NodeID"] = eNodeID_3;
+        jsonobject["Pitch"] = Pitch;
+        jsonobject["Roll"] = Roll;
+        jsonobject["Frekuensi"] = Frekuensi;
+        JsonObject jsonobject1 = jsonarray.createNestedObject();
+        jsonobject1["NodeID"] = eNodeID_4;
+        jsonobject1["TofX"] = TofX;
+        jsonobject1["TofY"] = TofY;
+        jsonobject1["TofZ"] = TofZ;
+        JsonObject jsonobject2 = jsonarray.createNestedObject();
+        jsonobject2["NodeID"] = node_asal;
+        jsonobject2["Suhu"] = suhu;
+        jsonobject2["Kelembapan"] = kelembapan;
+        serializeJson(doc, datakirim);
+        char kirim_loop[datakirim.length() + 1];
+        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
+        network.update();
+        RF24NetworkHeader header(/*to node*/ NODE_2);
+        bool NODE_2 = network.write(header, &kirim_loop, sizeof(kirim_loop));
+        Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+      }
+    }
+//==================================================POSISI NODE KE - 4==================================================  
+    if( count == 3){
+      Serial.print("Received packet from NODE " + jumlahnode[2]);
+      if(jumlahnode[0] == 2 && jumlahnode[1] == 3 && jumlahnode[2] == 4){
+        JsonObject NodeID_2 = doc[0];
+        int fNodeID_2 = NodeID_2["NodeID"];
+        int Berat = NodeID_2["Berat"];
+        JsonObject NodeID_3 = doc[1];
+        int fNodeID_3 = NodeID_3["NodeID"];
+        int Pitch = NodeID_3["Pitch"];
+        int Roll = NodeID_3["Roll"];
+        int Frekuensi = NodeID_3["Frekuensi"];
+        JsonObject NodeID_4 = doc[2];
+        int fNodeID_4 = NodeID_4["NodeID"];
+        int TofX = NodeID_4["TofX"];
+        int TofY = NodeID_4["TofY"];
+        int TofZ = NodeID_4["TofZ"];
+        JsonArray jsonarray = doc.to<JsonArray>();
+        JsonObject jsonobject = jsonarray.createNestedObject();
+        jsonobject["NodeID"] = fNodeID_2;
+        jsonobject["Berat"] = Berat;
+        JsonObject jsonobject1 = jsonarray.createNestedObject();
+        jsonobject1["NodeID"] = fNodeID_3;
+        jsonobject1["Pitch"] = Pitch;
+        jsonobject1["Roll"] = Roll;
+        jsonobject1["Frekuensi"] = Frekuensi;
+        JsonObject jsonobject2 = jsonarray.createNestedObject();
+        jsonobject2["NodeID"] = fNodeID_4;
+        jsonobject2["TofX"] = TofX;
+        jsonobject2["TofY"] = TofY;
+        jsonobject2["TofZ"] = TofZ;
+        JsonObject jsonobject3 = jsonarray.createNestedObject();
+        jsonobject3["NodeID"] = node_asal;
+        jsonobject3["Suhu"] = suhu;
+        jsonobject3["Kelembapan"] = kelembapan;
+        serializeJson(doc, datakirim);
+        char kirim_loop[datakirim.length() + 1];
+        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
+        network.update();
+        RF24NetworkHeader header(/*to node*/ NODE_5);
+        bool NODE_5 = network.write(header, &kirim_loop, sizeof(kirim_loop));
+        Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+      }
+      if(jumlahnode[0] == 2 && jumlahnode[1] == 4 && jumlahnode[2] == 3){
+        JsonObject NodeID_2 = doc[0];
+        int gNodeID_2 = NodeID_2["NodeID"];
+        int Berat = NodeID_2["Berat"];
+        JsonObject NodeID_4 = doc[1];
+        int gNodeID_4 = NodeID_4["NodeID"];
+        int TofX = NodeID_4["TofX"];
+        int TofY = NodeID_4["TofY"];
+        int TofZ = NodeID_4["TofZ"];
+        JsonObject NodeID_3 = doc[2];
+        int gNodeID_3 = NodeID_3["NodeID"];
+        int Pitch = NodeID_3["Pitch"];
+        int Roll = NodeID_3["Roll"];
+        int Frekuensi = NodeID_3["Frekuensi"];
+        JsonArray jsonarray = doc.to<JsonArray>();
+        JsonObject jsonobject = jsonarray.createNestedObject();
+        jsonobject["NodeID"] = gNodeID_2;
+        jsonobject["Berat"] = Berat;
+        JsonObject jsonobject1 = jsonarray.createNestedObject();
+        jsonobject1["NodeID"] = gNodeID_4;
+        jsonobject1["TofX"] = TofX;
+        jsonobject1["TofY"] = TofY;
+        jsonobject1["TofZ"] = TofZ;
+        JsonObject jsonobject2 = jsonarray.createNestedObject();
+        jsonobject2["NodeID"] = gNodeID_3;
+        jsonobject2["Pitch"] = Pitch;
+        jsonobject2["Roll"] = Roll;
+        jsonobject2["Frekuensi"] = Frekuensi;
+        JsonObject jsonobject3 = jsonarray.createNestedObject();
+        jsonobject3["NodeID"] = node_asal;
+        jsonobject3["Suhu"] = suhu;
+        jsonobject3["Kelembapan"] = kelembapan;
+        serializeJson(doc, datakirim);
+        char kirim_loop[datakirim.length() + 1];
+        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
+        network.update();
+        RF24NetworkHeader header(/*to node*/ NODE_5);
+        bool NODE_5 = network.write(header, &kirim_loop, sizeof(kirim_loop));
+        Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+      }
+      if(jumlahnode[0] == 3 && jumlahnode[1] == 2 && jumlahnode[2] == 4){
+        JsonObject NodeID_3 = doc[0];
+        int hNodeID_3 = NodeID_3["NodeID"];
+        int Pitch = NodeID_3["Pitch"];
+        int Roll = NodeID_3["Roll"];
+        int Frekuensi = NodeID_3["Frekuensi"];
+        JsonObject NodeID_2 = doc[1];
+        int hNodeID_2 = NodeID_2["NodeID"];
+        int Berat = NodeID_2["Berat"];
+        JsonObject NodeID_4 = doc[2];
+        int hNodeID_4 = NodeID_4["NodeID"];
+        int TofX = NodeID_4["TofX"];
+        int TofY = NodeID_4["TofY"];
+        int TofZ = NodeID_4["TofZ"];
+        JsonArray jsonarray = doc.to<JsonArray>();
+        JsonObject jsonobject = jsonarray.createNestedObject();
+        jsonobject["NodeID"] = hNodeID_3;
+        jsonobject["Pitch"] = Pitch;
+        jsonobject["Roll"] = Roll;
+        jsonobject["Frekuensi"] = Frekuensi;
+        JsonObject jsonobject1 = jsonarray.createNestedObject();
+        jsonobject1["NodeID"] = hNodeID_2;
+        jsonobject1["Berat"] = Berat;
+        JsonObject jsonobject2 = jsonarray.createNestedObject();
+        jsonobject2["NodeID"] = hNodeID_4;
+        jsonobject2["TofX"] = TofX;
+        jsonobject2["TofY"] = TofY;
+        jsonobject2["TofZ"] = TofZ;
+        JsonObject jsonobject3 = jsonarray.createNestedObject();
+        jsonobject3["NodeID"] = node_asal;
+        jsonobject3["Suhu"] = suhu;
+        jsonobject3["Kelembapan"] = kelembapan;
+        serializeJson(doc, datakirim);
+        char kirim_loop[datakirim.length() + 1];
+        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
+        network.update();
+        RF24NetworkHeader header(/*to node*/ NODE_5);
+        bool NODE_5 = network.write(header, &kirim_loop, sizeof(kirim_loop));
+        Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+      }
+      if(jumlahnode[0] == 3 && jumlahnode[1] == 4 && jumlahnode[2] == 2){
+        JsonObject NodeID_3 = doc[0];
+        int iNodeID_3 = NodeID_3["NodeID"];
+        int Pitch = NodeID_3["Pitch"];
+        int Roll = NodeID_3["Roll"];
+        int Frekuensi = NodeID_3["Frekuensi"];
+        JsonObject NodeID_4 = doc[1];
+        int iNodeID_4 = NodeID_4["NodeID"];
+        int TofX = NodeID_4["TofX"];
+        int TofY = NodeID_4["TofY"];
+        int TofZ = NodeID_4["TofZ"];
+        JsonObject NodeID_2 = doc[2];
+        int iNodeID_2 = NodeID_2["NodeID"];
+        int Berat = NodeID_2["Berat"];
+        JsonArray jsonarray = doc.to<JsonArray>();
+        JsonObject jsonobject = jsonarray.createNestedObject();
+        jsonobject["NodeID"] = iNodeID_3;
+        jsonobject["Pitch"] = Pitch;
+        jsonobject["Roll"] = Roll;
+        jsonobject["Frekuensi"] = Frekuensi;
+        JsonObject jsonobject1 = jsonarray.createNestedObject();
+        jsonobject1["NodeID"] = iNodeID_4;
+        jsonobject1["TofX"] = TofX;
+        jsonobject1["TofY"] = TofY;
+        jsonobject1["TofZ"] = TofZ;
+        JsonObject jsonobject2 = jsonarray.createNestedObject();
+        jsonobject2["NodeID"] = iNodeID_2;
+        jsonobject2["Berat"] = Berat;
+        JsonObject jsonobject3 = jsonarray.createNestedObject();
+        jsonobject3["NodeID"] = node_asal;
+        jsonobject3["Suhu"] = suhu;
+        jsonobject3["Kelembapan"] = kelembapan;
+        serializeJson(doc, datakirim);
+        char kirim_loop[datakirim.length() + 1];
+        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
+        network.update();
+        RF24NetworkHeader header(/*to node*/ NODE_5);
+        bool NODE_5 = network.write(header, &kirim_loop, sizeof(kirim_loop));
+        Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+      }
+      if(jumlahnode[0] == 4 && jumlahnode[1] == 3 && jumlahnode[2] == 2){
+        JsonObject NodeID_4 = doc[0];
+        int jNodeID_4 = NodeID_4["NodeID"];
+        int TofX = NodeID_4["TofX"];
+        int TofY = NodeID_4["TofY"];
+        int TofZ = NodeID_4["TofZ"];
+        JsonObject NodeID_3 = doc[1];
+        int jNodeID_3 = NodeID_3["NodeID"];
+        int Pitch = NodeID_3["Pitch"];
+        int Roll = NodeID_3["Roll"];
+        int Frekuensi = NodeID_3["Frekuensi"];
+        JsonObject NodeID_2 = doc[2];
+        int jNodeID_2 = NodeID_2["NodeID"];
+        int Berat = NodeID_2["Berat"];
+        JsonArray jsonarray = doc.to<JsonArray>();
+        JsonObject jsonobject = jsonarray.createNestedObject();
+        jsonobject["NodeID"] = jNodeID_4;
+        jsonobject["TofX"] = TofX;
+        jsonobject["TofY"] = TofY;
+        jsonobject["TofZ"] = TofZ;
+        JsonObject jsonobject1 = jsonarray.createNestedObject();
+        jsonobject1["NodeID"] = jNodeID_3;
+        jsonobject1["Pitch"] = Pitch;
+        jsonobject1["Roll"] = Roll;
+        jsonobject1["Frekuensi"] = Frekuensi;
+        JsonObject jsonobject2 = jsonarray.createNestedObject();
+        jsonobject2["NodeID"] = jNodeID_2;
+        jsonobject2["Berat"] = Berat;
+        JsonObject jsonobject3 = jsonarray.createNestedObject();
+        jsonobject3["NodeID"] = node_asal;
+        jsonobject3["Suhu"] = suhu;
+        jsonobject3["Kelembapan"] = kelembapan;
+        serializeJson(doc, datakirim);
+        char kirim_loop[datakirim.length() + 1];
+        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
+        network.update();
+        RF24NetworkHeader header(/*to node*/ NODE_5);
+        bool NODE_5 = network.write(header, &kirim_loop, sizeof(kirim_loop));
+        Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+      }
+      if(jumlahnode[0] == 4 && jumlahnode[1] == 2 && jumlahnode[2] == 3){
+        JsonObject NodeID_4 = doc[0];
+        int kNodeID_4 = NodeID_4["NodeID"];
+        int TofX = NodeID_4["TofX"];
+        int TofY = NodeID_4["TofY"];
+        int TofZ = NodeID_4["TofZ"];
+        JsonObject NodeID_2 = doc[1];
+        int kNodeID_2 = NodeID_2["NodeID"];
+        int Berat = NodeID_2["Berat"];
+        JsonObject NodeID_3 = doc[2];
+        int kNodeID_3 = NodeID_3["NodeID"];
+        int Pitch = NodeID_3["Pitch"];
+        int Roll = NodeID_3["Roll"];
+        int Frekuensi = NodeID_3["Frekuensi"];
+        JsonArray jsonarray = doc.to<JsonArray>();
+        JsonObject jsonobject = jsonarray.createNestedObject();
+        jsonobject["NodeID"] = kNodeID_4;
+        jsonobject["TofX"] = TofX;
+        jsonobject["TofY"] = TofY;
+        jsonobject["TofZ"] = TofZ;
+        JsonObject jsonobject1 = jsonarray.createNestedObject();
+        jsonobject1["NodeID"] = kNodeID_2;
+        jsonobject1["Berat"] = Berat;
+        JsonObject jsonobject2 = jsonarray.createNestedObject();
+        jsonobject2["NodeID"] = kNodeID_3;
+        jsonobject2["Pitch"] = Pitch;
+        jsonobject2["Roll"] = Roll;
+        jsonobject2["Frekuensi"] = Frekuensi;
+        JsonObject jsonobject3 = jsonarray.createNestedObject();
+        jsonobject3["NodeID"] = node_asal;
+        jsonobject3["Suhu"] = suhu;
+        jsonobject3["Kelembapan"] = kelembapan;
+        serializeJson(doc, datakirim);
+        char kirim_loop[datakirim.length() + 1];
+        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
+        network.update();
+        RF24NetworkHeader header(/*to node*/ NODE_5);
+        bool NODE_5 = network.write(header, &kirim_loop, sizeof(kirim_loop));
+        Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+      }
+    }
+  }
+  //pBLEScan->clearResults();   // delete results fromBLEScan buffer to release memory
+}

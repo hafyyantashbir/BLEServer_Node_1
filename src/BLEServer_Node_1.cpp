@@ -11,7 +11,6 @@
 #include <SPI.h>
 #include <RF24.h>
 #include <RF24Network.h>
-#include <RF24Mesh.h>
 #include "printf.h"
 
 //Library BLE
@@ -34,31 +33,62 @@ char days[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Fri
 //konfigurasi NRF24L01
 RF24 radio(4, 5); //(pin CE, pin CSN)
 RF24Network network(radio); // Network uses that radio
-RF24Mesh mesh(radio, network);
 uint8_t dataBuffer[MAX_PAYLOAD_SIZE];  //MAX_PAYLOAD_SIZE is defined in RF24Network_config.h
 #define LED_BUILTIN 2
 
 //alamat node
-#define NODE_Master 0
-#define this_node 1
-#define NODE_2 2
-#define NODE_3 3
-#define NODE_4 4
-#define NODE_5 5
+const uint16_t NODE_Master = 00;   // Address of our node in Octal format
+const uint16_t this_node = 01;   // Address of our node in Octal format
+const uint16_t NODE_2 = 02;  // Address of the other node in Octal format
+const uint16_t NODE_3 = 03;  // Address of the other node in Octal format
+const uint16_t NODE_4 = 04;  // Address of the other node in Octal format
+const uint16_t NODE_5 = 05;  // Address of the other node in Octal format
 
 
 //variabel DATA
-int node_asal = 1; //data node
-unsigned long suhu = 12;  //data suhu
-unsigned long kelembapan = 90; //data kelembapan
-String datakirim; //data Json yang akan dikirim
-String dataterima; //data Json yang diterima
-int count = 0; //Variabel count utuk menghitung data pada data Json
-int jumlahnode[5]; //array berisi NodeID
+int ID;
+int suhu;
+int kelembapan;
+int unix1;
+int berat;
+int unix2;
+int pitch;
+int roll;
+int frekuensi;
+int unix3;
+int tofx;
+int tofy;
+int tofz;
+int unix4;
+int usx;
+int usy;
+int usz;
+int unix5;
+
+struct paket_pesan {  // Structure of our payload
+  int ID;
+  int suhu;
+  int kelembapan;
+  int unix1;
+  int berat;
+  int unix2;
+  int pitch;
+  int roll;
+  int frekuensi;
+  int unix3;
+  int tofx;
+  int tofy;
+  int tofz;
+  int unix4;
+  int usx;
+  int usy;
+  int usz;
+  int unix5;
+};
 
 //variabel millis
-unsigned long previousTime = 0; // Waktu sebelumnya
-unsigned long intervalmillis = 10000; // Interval waktu (dalam milidetik)
+// unsigned long previousTime = 0; // Waktu sebelumnya
+// unsigned long intervalmillis = 10000; // Interval waktu (dalam milidetik)
 
 //variabel RSSI node
 int NODE_Master_RSSI;
@@ -66,9 +96,6 @@ int NODE_2_RSSI;
 int NODE_3_RSSI;
 int NODE_4_RSSI;
 int NODE_5_RSSI;
-
-//variabel case
-int pilihan = 1;
 
 //variabel BLE
 int scanTime = 1; //In seconds
@@ -121,7 +148,6 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
 
 void setup() {
   Serial.begin(115200);
-  StaticJsonDocument<512> doc; // buat document Json
 
   //Fungsi untuk 2 loop
   //  xTaskCreatePinnedToCore(
@@ -145,22 +171,16 @@ void setup() {
   while (!Serial) {
     // some boards need this because of native USB capability
   }
-  mesh.setNodeID(this_node); //Set the Node ID
-  Serial.println(F("Connecting to the mesh..."));
+  Serial.println(F("RF24Network/examples/helloworld_tx/"));
 
-  if (!mesh.begin()){
-    if (radio.isChipConnected()){
-      do {
-        // mesh.renewAddress() will return MESH_DEFAULT_ADDRESS on failure to connect
-        Serial.println(F("Could not connect to network.\nConnecting to the mesh..."));
-      } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-    } else {
-      Serial.println(F("Radio hardware not responding."));
-      while (1) {
-        // hold in an infinite loop
-      }
+  if (!radio.begin()) {
+    Serial.println(F("Radio hardware not responding!"));
+    while (1) {
+      // hold in infinite loop
     }
   }
+  radio.setChannel(90);
+  network.begin(/*node address*/ this_node);
   printf_begin();        // needed for RF24* libs' internal printf() calls
   radio.printDetails();  // requires printf support
 
@@ -195,6 +215,9 @@ void setup() {
   Serial.printf("Arduino Stack was set to %d bytes", getArduinoLoopTaskStackSize());
   // Print unused stack for the task that is running setup()
   Serial.printf("\nSetup() - Free Stack Space: %d", uxTaskGetStackHighWaterMark(NULL));
+
+  suhu = 12;
+  kelembapan = 99;
 }
 
 void loop() {
@@ -203,12 +226,12 @@ void loop() {
   // Print unused stack for the task that is running loop() - the same as for setup()
   Serial.printf("\nLoop() - Free Stack Space: %d", uxTaskGetStackHighWaterMark(NULL));
 
-  mesh.update();  // Check the network regularly
+  network.update();  // Check the network regularly
   DateTime now = rtc.now();
   StaticJsonDocument<512> doc; // Json Document
 
   //scan ble
-  unsigned long currentTime = millis(); // Waktu saat ini
+  //unsigned long currentTime = millis(); // Waktu saat ini
 
   // if (currentTime - previousTime >= intervalmillis) {
   //   previousTime = currentTime; // Perbarui waktu sebelumnya
@@ -222,160 +245,84 @@ void loop() {
 
   while (network.available()) {
     RF24NetworkHeader header;  // If so, grab it and print it out
-    uint16_t payloadSize = network.peek(header);     // Use peek() to get the size of the payload
-    char terima_loop[payloadSize]; //buat variabel untuk nerima data array
-    network.read(header, &terima_loop, payloadSize);  // Get the data
-    dataterima = "";
-    for (uint32_t i = 0; i < payloadSize; i++){
-      dataterima += terima_loop[i];
-    }
-    Serial.println(dataterima);
-    DeserializationError error = deserializeJson(doc, dataterima);
-
-    if (error) {
-      Serial.print("deserializeJson() failed: ");
-      Serial.println(error.c_str());
-      return;
-    }
-
-    for (int i = 0; i <= 4; i++) {
-      jumlahnode[i] = NULL;
-      count = 0;
-    }
-    for (int i = 0; i <= 4; i++) {
-      JsonObject parsing = doc[i];
-      int NodeID = parsing["NodeID"];
-      if (NodeID != 0) {
-        count++;
-        jumlahnode[i] += NodeID;
-      }
-    }
+    paket_pesan pesan;
+    network.read(header, &pesan, sizeof(pesan));  // Get the data
+    Serial.print("ID          :");
+    Serial.println(pesan.ID);
+    Serial.print("Suhu        :");
+    Serial.println(pesan.suhu);
+    suhu = pesan.suhu;
+    Serial.print("Kelembapan  :");
+    Serial.println(pesan.kelembapan);
+    kelembapan = pesan.kelembapan;
+    Serial.print("Unixtime 1  :");
+    Serial.println(pesan.unix1);
+    unix1 = pesan.unix1;
+    Serial.print("Berat       :");
+    Serial.println(pesan.berat);
+    berat = pesan.berat;
+    Serial.print("Unixtime 2  :");
+    Serial.println(pesan.unix2);
+    unix2 = pesan.unix2;
+    Serial.print("Pitch       :");
+    Serial.println(pesan.pitch);
+    pitch = pesan.pitch;
+    Serial.print("Roll        :");
+    Serial.println(pesan.roll);
+    roll = pesan.roll;
+    Serial.print("Frekuensi   :");
+    Serial.println(pesan.frekuensi);
+    frekuensi = pesan.frekuensi;
+    Serial.print("Unixtime 3  :");
+    Serial.println(pesan.unix3);
+    unix3 = pesan.unix3;
+    Serial.print("Tof X       :");
+    Serial.println(pesan.tofx);
+    tofx = pesan.tofx;
+    Serial.print("Tof Y       :");
+    Serial.println(pesan.tofy);
+    tofy = pesan.tofy;
+    Serial.print("Tof Z       :");
+    Serial.println(pesan.tofz);
+    tofz = pesan.tofz;
+    Serial.print("Unixtime 4  :");
+    Serial.println(pesan.unix4);
+    unix4 = pesan.unix4;
+    Serial.print("US X        :");
+    Serial.println(pesan.usx);
+    usx = pesan.usx;
+    Serial.print("US Y        :");
+    Serial.println(pesan.usy);
+    usy = pesan.usy;
+    Serial.print("US Z        :");
+    Serial.println(pesan.usz);
+    usz = pesan.usz;
+    Serial.print("Unixtime 5  :");
+    Serial.println(pesan.unix5);
+    unix5 = pesan.unix5;
 //==================================================POSISI NODE KE - 1==================================================
-    if (count == 1 && jumlahnode[0] == 6) {
+    if (pesan.ID == 6) {
       Serial.print("Received packet from NODE Master");
-      JsonArray jsonarray = doc.to<JsonArray>();
-      JsonObject jsonobject = jsonarray.createNestedObject();
-      jsonobject["NodeID"] = node_asal;
-      jsonobject["Suhu"] = suhu;
-      jsonobject["Kelembapan"] = kelembapan;
-      jsonobject["Unixtime"] = now.unixtime();
-      datakirim = "";
-      serializeJson(doc, datakirim);
-      char kirim_loop[datakirim.length() + 1];
-      datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
       BLEScanResults foundDevices = pBLEScan->start(scanTime, false);
       if (NODE_2_RSSI >= NODE_3_RSSI && NODE_2_RSSI >= NODE_4_RSSI && NODE_2_RSSI >= NODE_5_RSSI) {
+        
         if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
           Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-          JsonArray jsonarray = doc.to<JsonArray>();
-          JsonObject jsonobject = jsonarray.createNestedObject();
-          jsonobject["NodeID"] = node_asal;
-          jsonobject["Suhu"] = suhu;
-          jsonobject["Kelembapan"] = kelembapan;
-          jsonobject["Unixtime"] = now.unixtime();
-          JsonObject jsonobject1 = jsonarray.createNestedObject();
-          jsonobject1["NodeID"] = 2;
-          jsonobject1["Berat"] = NULL;
-          jsonobject1["Unixtime"] = NULL;
-          datakirim = "";
-          serializeJson(doc, datakirim);
-          char kirim_loop[datakirim.length() + 1];
-          datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
+
           if(NODE_3_RSSI >= NODE_4_RSSI && NODE_3_RSSI >= NODE_5_RSSI){
             if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
               Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = node_asal;
-              jsonobject["Suhu"] = suhu;
-              jsonobject["Kelembapan"] = kelembapan;
-              jsonobject["Unixtime"] = now.unixtime();
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = 2;
-              jsonobject1["Berat"] = NULL;
-              jsonobject1["Unixtime"] = NULL;
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = 3;
-              jsonobject2["Pitch"] = NULL;
-              jsonobject2["Roll"] = NULL;
-              jsonobject2["Frekuensi"] = NULL;
-              jsonobject2["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
+
               if(NODE_4_RSSI >= NODE_5_RSSI){
                 if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
                   Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-                  JsonArray jsonarray = doc.to<JsonArray>();
-                  JsonObject jsonobject = jsonarray.createNestedObject();
-                  jsonobject["NodeID"] = node_asal;
-                  jsonobject["Suhu"] = suhu;
-                  jsonobject["Kelembapan"] = kelembapan;
-                  jsonobject["Unixtime"] = now.unixtime();
-                  JsonObject jsonobject1 = jsonarray.createNestedObject();
-                  jsonobject1["NodeID"] = 2;
-                  jsonobject1["Berat"] = NULL;
-                  jsonobject1["Unixtime"] = NULL;
-                  JsonObject jsonobject2 = jsonarray.createNestedObject();
-                  jsonobject2["NodeID"] = 3;
-                  jsonobject2["Pitch"] = NULL;
-                  jsonobject2["Roll"] = NULL;
-                  jsonobject2["Frekuensi"] = NULL;
-                  jsonobject2["Unixtime"] = NULL;
-                  JsonObject jsonobject3 = jsonarray.createNestedObject();
-                  jsonobject3["NodeID"] = 4;
-                  jsonobject3["TofX"] = NULL;
-                  jsonobject3["TofY"] = NULL;
-                  jsonobject3["TofZ"] = NULL;
-                  jsonobject3["Unixtime"] = NULL;
-                  datakirim = "";
-                  serializeJson(doc, datakirim);
-                  char kirim_loop[datakirim.length() + 1];
-                  datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
+
                   if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
                     Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-                    JsonArray jsonarray = doc.to<JsonArray>();
-                    JsonObject jsonobject = jsonarray.createNestedObject();
-                    jsonobject["NodeID"] = node_asal;
-                    jsonobject["Suhu"] = suhu;
-                    jsonobject["Kelembapan"] = kelembapan;
-                    jsonobject["Unixtime"] = now.unixtime();
-                    JsonObject jsonobject1 = jsonarray.createNestedObject();
-                    jsonobject1["NodeID"] = 2;
-                    jsonobject1["Berat"] = NULL;
-                    jsonobject1["Unixtime"] = NULL;
-                    JsonObject jsonobject2 = jsonarray.createNestedObject();
-                    jsonobject2["NodeID"] = 3;
-                    jsonobject2["Pitch"] = NULL;
-                    jsonobject2["Roll"] = NULL;
-                    jsonobject2["Frekuensi"] = NULL;
-                    jsonobject2["Unixtime"] = NULL;
-                    JsonObject jsonobject3 = jsonarray.createNestedObject();
-                    jsonobject3["NodeID"] = 4;
-                    jsonobject3["TofX"] = NULL;
-                    jsonobject3["TofY"] = NULL;
-                    jsonobject3["TofZ"] = NULL;
-                    jsonobject3["Unixtime"] = NULL;
-                    JsonObject jsonobject4 = jsonarray.createNestedObject();
-                    jsonobject4["NodeID"] = 5;
-                    jsonobject4["usX"] = NULL;
-                    jsonobject4["usY"] = NULL;
-                    jsonobject4["usZ"] = NULL;
-                    jsonobject4["Unixtime"] = NULL;
-                    datakirim = "";
-                    serializeJson(doc, datakirim);
-                    char kirim_loop[datakirim.length() + 1];
-                    datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
+
                     if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
                       Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-                      if (!mesh.checkConnection()) {
-                        do {
-                          Serial.println(F("Reconnecting to mesh network..."));
-                        } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                      } else {
-                        Serial.println(F("Send fail, Test OK"));
-                      }
+                      
                     }
                   }
                 }

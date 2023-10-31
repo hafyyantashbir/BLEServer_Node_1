@@ -20,7 +20,7 @@
 #include <BLEAdvertisedDevice.h>
 
 //konfigurasi stack size
-SET_LOOP_TASK_STACK_SIZE(64*1024); // 64KB
+SET_LOOP_TASK_STACK_SIZE(64 * 1024); // 64KB
 
 //konfigurasi RTC
 RTC_DS3231 rtc;
@@ -251,13 +251,10 @@ void loop() {
     Serial.println(pesan.ID);
     Serial.print("Suhu        :");
     Serial.println(pesan.suhu);
-    suhu = pesan.suhu;
     Serial.print("Kelembapan  :");
     Serial.println(pesan.kelembapan);
-    kelembapan = pesan.kelembapan;
     Serial.print("Unixtime 1  :");
     Serial.println(pesan.unix1);
-    unix1 = pesan.unix1;
     Serial.print("Berat       :");
     Serial.println(pesan.berat);
     berat = pesan.berat;
@@ -300,455 +297,138 @@ void loop() {
     Serial.print("Unixtime 5  :");
     Serial.println(pesan.unix5);
     unix5 = pesan.unix5;
-//==================================================POSISI NODE KE - 1==================================================
+    //==================================================POSISI NODE KE - 1==================================================
     if (pesan.ID == 6) {
       Serial.print("Received packet from NODE Master");
       BLEScanResults foundDevices = pBLEScan->start(scanTime, false);
       if (NODE_2_RSSI >= NODE_3_RSSI && NODE_2_RSSI >= NODE_4_RSSI && NODE_2_RSSI >= NODE_5_RSSI) {
-        
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-
-          if(NODE_3_RSSI >= NODE_4_RSSI && NODE_3_RSSI >= NODE_5_RSSI){
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-
-              if(NODE_4_RSSI >= NODE_5_RSSI){
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-
-                  if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-                    Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-
-                    if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                      Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-                      
-                    }
+        paket_pesan pesan = { 1, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_2);
+        bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+        if (!NODE_2) {
+          if (NODE_3_RSSI >= NODE_4_RSSI && NODE_3_RSSI >= NODE_5_RSSI) {
+            paket_pesan pesan = { 12, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_3);
+            bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+            if (!NODE_3) {
+              if (NODE_4_RSSI >= NODE_5_RSSI) {
+                paket_pesan pesan = { 123, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_4);
+                bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+                if (!NODE_4) {
+                  paket_pesan pesan = { 1234, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                  RF24NetworkHeader header(/*to node*/ NODE_5);
+                  bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+                  Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+                  if (!NODE_5) {
+                    paket_pesan pesan = { 12345, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                    RF24NetworkHeader header(/*to node*/ NODE_Master);
+                    bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                    Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
                   }
                 }
-              }else if(NODE_5_RSSI >= NODE_4_RSSI){
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-                  JsonArray jsonarray = doc.to<JsonArray>();
-                  JsonObject jsonobject = jsonarray.createNestedObject();
-                  jsonobject["NodeID"] = node_asal;
-                  jsonobject["Suhu"] = suhu;
-                  jsonobject["Kelembapan"] = kelembapan;
-                  jsonobject["Unixtime"] = now.unixtime();
-                  JsonObject jsonobject1 = jsonarray.createNestedObject();
-                  jsonobject1["NodeID"] = 2;
-                  jsonobject1["Berat"] = NULL;
-                  jsonobject1["Unixtime"] = NULL;
-                  JsonObject jsonobject2 = jsonarray.createNestedObject();
-                  jsonobject2["NodeID"] = 3;
-                  jsonobject2["Pitch"] = NULL;
-                  jsonobject2["Roll"] = NULL;
-                  jsonobject2["Frekuensi"] = NULL;
-                  jsonobject2["Unixtime"] = NULL;
-                  JsonObject jsonobject3 = jsonarray.createNestedObject();
-                  jsonobject3["NodeID"] = 5;
-                  jsonobject3["usX"] = NULL;
-                  jsonobject3["usY"] = NULL;
-                  jsonobject3["usZ"] = NULL;
-                  jsonobject3["Unixtime"] = NULL;
-                  datakirim = "";
-                  serializeJson(doc, datakirim);
-                  char kirim_loop[datakirim.length() + 1];
-                  datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                  if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-                    Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-                    JsonArray jsonarray = doc.to<JsonArray>();
-                    JsonObject jsonobject = jsonarray.createNestedObject();
-                    jsonobject["NodeID"] = node_asal;
-                    jsonobject["Suhu"] = suhu;
-                    jsonobject["Kelembapan"] = kelembapan;
-                    jsonobject["Unixtime"] = now.unixtime();
-                    JsonObject jsonobject1 = jsonarray.createNestedObject();
-                    jsonobject1["NodeID"] = 2;
-                    jsonobject1["Berat"] = NULL;
-                    jsonobject1["Unixtime"] = NULL;
-                    JsonObject jsonobject2 = jsonarray.createNestedObject();
-                    jsonobject2["NodeID"] = 3;
-                    jsonobject2["Pitch"] = NULL;
-                    jsonobject2["Roll"] = NULL;
-                    jsonobject2["Frekuensi"] = NULL;
-                    jsonobject2["Unixtime"] = NULL;
-                    JsonObject jsonobject3 = jsonarray.createNestedObject();
-                    jsonobject3["NodeID"] = 5;
-                    jsonobject3["usX"] = NULL;
-                    jsonobject3["usY"] = NULL;
-                    jsonobject3["usZ"] = NULL;
-                    jsonobject3["Unixtime"] = NULL;
-                    JsonObject jsonobject4 = jsonarray.createNestedObject();
-                    jsonobject4["NodeID"] = 4;
-                    jsonobject4["TofX"] = NULL;
-                    jsonobject4["TofY"] = NULL;
-                    jsonobject4["TofZ"] = NULL;
-                    jsonobject4["Unixtime"] = NULL;
-                    datakirim = "";
-                    serializeJson(doc, datakirim);
-                    char kirim_loop[datakirim.length() + 1];
-                    datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                    if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                      Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                      if (!mesh.checkConnection()) {
-                        do {
-                          Serial.println(F("Reconnecting to mesh network..."));
-                        } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                      } else {
-                        Serial.println(F("Send fail, Test OK"));
-                      }
-                    }
+              } else if (NODE_5_RSSI >= NODE_4_RSSI) {
+                paket_pesan pesan = { 123, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_5);
+                bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+                if (!NODE_5) {
+                  paket_pesan pesan = { 1235, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                  RF24NetworkHeader header(/*to node*/ NODE_4);
+                  bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+                  Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+                  if (!NODE_4) {
+                    paket_pesan pesan = { 12354, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                    RF24NetworkHeader header(/*to node*/ NODE_Master);
+                    bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                    Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
                   }
                 }
               }
             }
-          }else if(NODE_4_RSSI >= NODE_3_RSSI && NODE_4_RSSI >= NODE_5_RSSI){
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = node_asal;
-              jsonobject["Suhu"] = suhu;
-              jsonobject["Kelembapan"] = kelembapan;
-              jsonobject["Unixtime"] = now.unixtime();
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = 2;
-              jsonobject1["Berat"] = NULL;
-              jsonobject1["Unixtime"] = NULL;
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = 4;
-              jsonobject2["TofX"] = NULL;
-              jsonobject2["TofY"] = NULL;
-              jsonobject2["TofZ"] = NULL;
-              jsonobject2["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(NODE_3_RSSI >= NODE_5_RSSI){
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-                  JsonArray jsonarray = doc.to<JsonArray>();
-                  JsonObject jsonobject = jsonarray.createNestedObject();
-                  jsonobject["NodeID"] = node_asal;
-                  jsonobject["Suhu"] = suhu;
-                  jsonobject["Kelembapan"] = kelembapan;
-                  jsonobject["Unixtime"] = now.unixtime();
-                  JsonObject jsonobject1 = jsonarray.createNestedObject();
-                  jsonobject1["NodeID"] = 2;
-                  jsonobject1["Berat"] = NULL;
-                  jsonobject1["Unixtime"] = NULL;
-                  JsonObject jsonobject2 = jsonarray.createNestedObject();
-                  jsonobject2["NodeID"] = 4;
-                  jsonobject2["TofX"] = NULL;
-                  jsonobject2["TofY"] = NULL;
-                  jsonobject2["TofZ"] = NULL;
-                  jsonobject2["Unixtime"] = NULL;
-                  JsonObject jsonobject3 = jsonarray.createNestedObject();
-                  jsonobject3["NodeID"] = 3;
-                  jsonobject3["Pitch"] = NULL;
-                  jsonobject3["Roll"] = NULL;
-                  jsonobject3["Frekuensi"] = NULL;
-                  jsonobject3["Unixtime"] = NULL;
-                  datakirim = "";
-                  serializeJson(doc, datakirim);
-                  char kirim_loop[datakirim.length() + 1];
-                  datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                  if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-                    Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-                    JsonArray jsonarray = doc.to<JsonArray>();
-                    JsonObject jsonobject = jsonarray.createNestedObject();
-                    jsonobject["NodeID"] = node_asal;
-                    jsonobject["Suhu"] = suhu;
-                    jsonobject["Kelembapan"] = kelembapan;
-                    jsonobject["Unixtime"] = now.unixtime();
-                    JsonObject jsonobject1 = jsonarray.createNestedObject();
-                    jsonobject1["NodeID"] = 2;
-                    jsonobject1["Berat"] = NULL;
-                    jsonobject1["Unixtime"] = NULL;
-                    JsonObject jsonobject2 = jsonarray.createNestedObject();
-                    jsonobject2["NodeID"] = 4;
-                    jsonobject2["TofX"] = NULL;
-                    jsonobject2["TofY"] = NULL;
-                    jsonobject2["TofZ"] = NULL;
-                    jsonobject2["Unixtime"] = NULL;
-                    JsonObject jsonobject3 = jsonarray.createNestedObject();
-                    jsonobject3["NodeID"] = 3;
-                    jsonobject3["Pitch"] = NULL;
-                    jsonobject3["Roll"] = NULL;
-                    jsonobject3["Frekuensi"] = NULL;
-                    jsonobject3["Unixtime"] = NULL;
-                    JsonObject jsonobject4 = jsonarray.createNestedObject();
-                    jsonobject4["NodeID"] = 5;
-                    jsonobject4["usX"] = NULL;
-                    jsonobject4["usY"] = NULL;
-                    jsonobject4["usZ"] = NULL;
-                    jsonobject4["Unixtime"] = NULL;
-                    datakirim = "";
-                    serializeJson(doc, datakirim);
-                    char kirim_loop[datakirim.length() + 1];
-                    datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                    if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                      Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                      if (!mesh.checkConnection()) {
-                        do {
-                          Serial.println(F("Reconnecting to mesh network..."));
-                        } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                      } else {
-                        Serial.println(F("Send fail, Test OK"));
-                      }
-                    }
+          } else if (NODE_4_RSSI >= NODE_3_RSSI && NODE_4_RSSI >= NODE_5_RSSI) {
+            paket_pesan pesan = { 12, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_4);
+            bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+            if (!NODE_4) {
+              if (NODE_3_RSSI >= NODE_5_RSSI) {
+                paket_pesan pesan = { 124, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_3);
+                bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+                if (!NODE_3) {
+                  paket_pesan pesan = { 1243, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                  RF24NetworkHeader header(/*to node*/ NODE_5);
+                  bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+                  Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+                  if (!NODE_5) {
+                    paket_pesan pesan = { 12435, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                    RF24NetworkHeader header(/*to node*/ NODE_Master);
+                    bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                    Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
                   }
                 }
-              }else if(NODE_5_RSSI >= NODE_3_RSSI){
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-                  JsonArray jsonarray = doc.to<JsonArray>();
-                  JsonObject jsonobject = jsonarray.createNestedObject();
-                  jsonobject["NodeID"] = node_asal;
-                  jsonobject["Suhu"] = suhu;
-                  jsonobject["Kelembapan"] = kelembapan;
-                  jsonobject["Unixtime"] = now.unixtime();
-                  JsonObject jsonobject1 = jsonarray.createNestedObject();
-                  jsonobject1["NodeID"] = 2;
-                  jsonobject1["Berat"] = NULL;
-                  jsonobject1["Unixtime"] = NULL;
-                  JsonObject jsonobject2 = jsonarray.createNestedObject();
-                  jsonobject2["NodeID"] = 4;
-                  jsonobject2["TofX"] = NULL;
-                  jsonobject2["TofY"] = NULL;
-                  jsonobject2["TofZ"] = NULL;
-                  jsonobject2["Unixtime"] = NULL;
-                  JsonObject jsonobject3 = jsonarray.createNestedObject();
-                  jsonobject3["NodeID"] = 5;
-                  jsonobject3["usX"] = NULL;
-                  jsonobject3["usY"] = NULL;
-                  jsonobject3["usZ"] = NULL;
-                  jsonobject3["Unixtime"] = NULL;
-                  datakirim = "";
-                  serializeJson(doc, datakirim);
-                  char kirim_loop[datakirim.length() + 1];
-                  datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                  if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-                    Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-                    JsonArray jsonarray = doc.to<JsonArray>();
-                    JsonObject jsonobject = jsonarray.createNestedObject();
-                    jsonobject["NodeID"] = node_asal;
-                    jsonobject["Suhu"] = suhu;
-                    jsonobject["Kelembapan"] = kelembapan;
-                    jsonobject["Unixtime"] = now.unixtime();
-                    JsonObject jsonobject1 = jsonarray.createNestedObject();
-                    jsonobject1["NodeID"] = 2;
-                    jsonobject1["Berat"] = NULL;
-                    jsonobject1["Unixtime"] = NULL;
-                    JsonObject jsonobject2 = jsonarray.createNestedObject();
-                    jsonobject2["NodeID"] = 4;
-                    jsonobject2["TofX"] = NULL;
-                    jsonobject2["TofY"] = NULL;
-                    jsonobject2["TofZ"] = NULL;
-                    jsonobject2["Unixtime"] = NULL;
-                    JsonObject jsonobject3 = jsonarray.createNestedObject();
-                    jsonobject3["NodeID"] = 5;
-                    jsonobject3["usX"] = NULL;
-                    jsonobject3["usY"] = NULL;
-                    jsonobject3["usZ"] = NULL;
-                    jsonobject3["Unixtime"] = NULL;
-                    JsonObject jsonobject4 = jsonarray.createNestedObject();
-                    jsonobject4["NodeID"] = 3;
-                    jsonobject4["Pitch"] = NULL;
-                    jsonobject4["Roll"] = NULL;
-                    jsonobject4["Frekuensi"] = NULL;
-                    jsonobject4["Unixtime"] = NULL;
-                    datakirim = "";
-                    serializeJson(doc, datakirim);
-                    char kirim_loop[datakirim.length() + 1];
-                    datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                    if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                      Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                      if (!mesh.checkConnection()) {
-                        do {
-                          Serial.println(F("Reconnecting to mesh network..."));
-                        } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                      } else {
-                        Serial.println(F("Send fail, Test OK"));
-                      }
-                    }
+              } else if (NODE_5_RSSI >= NODE_3_RSSI) {
+                paket_pesan pesan = { 124, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_5);
+                bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+                if (!NODE_5) {
+                  paket_pesan pesan = { 1245, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                  RF24NetworkHeader header(/*to node*/ NODE_3);
+                  bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+                  Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+                  if (!NODE_3) {
+                    paket_pesan pesan = { 12453, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                    RF24NetworkHeader header(/*to node*/ NODE_Master);
+                    bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                    Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
                   }
                 }
               }
             }
-          }else if(NODE_5_RSSI >= NODE_3_RSSI && NODE_5_RSSI >= NODE_4_RSSI){
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = node_asal;
-              jsonobject["Suhu"] = suhu;
-              jsonobject["Kelembapan"] = kelembapan;
-              jsonobject["Unixtime"] = now.unixtime();
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = 2;
-              jsonobject1["Berat"] = NULL;
-              jsonobject1["Unixtime"] = NULL;
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = 5;
-              jsonobject2["usX"] = NULL;
-              jsonobject2["usY"] = NULL;
-              jsonobject2["usZ"] = NULL;
-              jsonobject2["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(NODE_3_RSSI >= NODE_4_RSSI){
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-                  JsonArray jsonarray = doc.to<JsonArray>();
-                  JsonObject jsonobject = jsonarray.createNestedObject();
-                  jsonobject["NodeID"] = node_asal;
-                  jsonobject["Suhu"] = suhu;
-                  jsonobject["Kelembapan"] = kelembapan;
-                  jsonobject["Unixtime"] = now.unixtime();
-                  JsonObject jsonobject1 = jsonarray.createNestedObject();
-                  jsonobject1["NodeID"] = 2;
-                  jsonobject1["Berat"] = NULL;
-                  jsonobject1["Unixtime"] = NULL;
-                  JsonObject jsonobject2 = jsonarray.createNestedObject();
-                  jsonobject2["NodeID"] = 5;
-                  jsonobject2["usX"] = NULL;
-                  jsonobject2["usY"] = NULL;
-                  jsonobject2["usZ"] = NULL;
-                  jsonobject2["Unixtime"] = NULL;
-                  JsonObject jsonobject3 = jsonarray.createNestedObject();
-                  jsonobject3["NodeID"] = 3;
-                  jsonobject3["Pitch"] = NULL;
-                  jsonobject3["Roll"] = NULL;
-                  jsonobject3["Frekuensi"] = NULL;
-                  jsonobject3["Unixtime"] = NULL;
-                  datakirim = "";
-                  serializeJson(doc, datakirim);
-                  char kirim_loop[datakirim.length() + 1];
-                  datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                  if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-                    Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-                    JsonArray jsonarray = doc.to<JsonArray>();
-                    JsonObject jsonobject = jsonarray.createNestedObject();
-                    jsonobject["NodeID"] = node_asal;
-                    jsonobject["Suhu"] = suhu;
-                    jsonobject["Kelembapan"] = kelembapan;
-                    jsonobject["Unixtime"] = now.unixtime();
-                    JsonObject jsonobject1 = jsonarray.createNestedObject();
-                    jsonobject1["NodeID"] = 2;
-                    jsonobject1["Berat"] = NULL;
-                    jsonobject1["Unixtime"] = NULL;
-                    JsonObject jsonobject2 = jsonarray.createNestedObject();
-                    jsonobject2["NodeID"] = 5;
-                    jsonobject2["usX"] = NULL;
-                    jsonobject2["usY"] = NULL;
-                    jsonobject2["usZ"] = NULL;
-                    jsonobject2["Unixtime"] = NULL;
-                    JsonObject jsonobject3 = jsonarray.createNestedObject();
-                    jsonobject3["NodeID"] = 3;
-                    jsonobject3["Pitch"] = NULL;
-                    jsonobject3["Roll"] = NULL;
-                    jsonobject3["Frekuensi"] = NULL;
-                    jsonobject3["Unixtime"] = NULL;
-                    JsonObject jsonobject4 = jsonarray.createNestedObject();
-                    jsonobject4["NodeID"] = 4;
-                    jsonobject4["TofX"] = NULL;
-                    jsonobject4["TofY"] = NULL;
-                    jsonobject4["TofZ"] = NULL;
-                    jsonobject4["Unixtime"] = NULL;
-                    datakirim = "";
-                    serializeJson(doc, datakirim);
-                    char kirim_loop[datakirim.length() + 1];
-                    datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                    if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                      Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                      if (!mesh.checkConnection()) {
-                        do {
-                          Serial.println(F("Reconnecting to mesh network..."));
-                        } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                      } else {
-                        Serial.println(F("Send fail, Test OK"));
-                      }
-                    }
+          } else if (NODE_5_RSSI >= NODE_3_RSSI && NODE_5_RSSI >= NODE_4_RSSI) {
+            paket_pesan pesan = { 12, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_5);
+            bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+            if (!NODE_5) {
+              if (NODE_3_RSSI >= NODE_4_RSSI) {
+                paket_pesan pesan = { 125, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_3);
+                bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+                if (!NODE_3) {
+                  paket_pesan pesan = { 1253, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                  RF24NetworkHeader header(/*to node*/ NODE_4);
+                  bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+                  Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+                  if (!NODE_4) {
+                    paket_pesan pesan = { 12534, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                    RF24NetworkHeader header(/*to node*/ NODE_Master);
+                    bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                    Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
                   }
                 }
-              }else if(NODE_4_RSSI >= NODE_3_RSSI){
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-                  JsonArray jsonarray = doc.to<JsonArray>();
-                  JsonObject jsonobject = jsonarray.createNestedObject();
-                  jsonobject["NodeID"] = node_asal;
-                  jsonobject["Suhu"] = suhu;
-                  jsonobject["Kelembapan"] = kelembapan;
-                  jsonobject["Unixtime"] = now.unixtime();
-                  JsonObject jsonobject1 = jsonarray.createNestedObject();
-                  jsonobject1["NodeID"] = 2;
-                  jsonobject1["Berat"] = NULL;
-                  jsonobject1["Unixtime"] = NULL;
-                  JsonObject jsonobject2 = jsonarray.createNestedObject();
-                  jsonobject2["NodeID"] = 5;
-                  jsonobject2["usX"] = NULL;
-                  jsonobject2["usY"] = NULL;
-                  jsonobject2["usZ"] = NULL;
-                  jsonobject2["Unixtime"] = NULL;
-                  JsonObject jsonobject3 = jsonarray.createNestedObject();
-                  jsonobject3["NodeID"] = 4;
-                  jsonobject3["TofX"] = NULL;
-                  jsonobject3["TofY"] = NULL;
-                  jsonobject3["TofZ"] = NULL;
-                  jsonobject3["Unixtime"] = NULL;
-                  datakirim = "";
-                  serializeJson(doc, datakirim);
-                  char kirim_loop[datakirim.length() + 1];
-                  datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                  if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-                    Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-                    JsonArray jsonarray = doc.to<JsonArray>();
-                    JsonObject jsonobject = jsonarray.createNestedObject();
-                    jsonobject["NodeID"] = node_asal;
-                    jsonobject["Suhu"] = suhu;
-                    jsonobject["Kelembapan"] = kelembapan;
-                    jsonobject["Unixtime"] = now.unixtime();
-                    JsonObject jsonobject1 = jsonarray.createNestedObject();
-                    jsonobject1["NodeID"] = 2;
-                    jsonobject1["Berat"] = NULL;
-                    jsonobject1["Unixtime"] = NULL;
-                    JsonObject jsonobject2 = jsonarray.createNestedObject();
-                    jsonobject2["NodeID"] = 5;
-                    jsonobject2["usX"] = NULL;
-                    jsonobject2["usY"] = NULL;
-                    jsonobject2["usZ"] = NULL;
-                    jsonobject2["Unixtime"] = NULL;
-                    JsonObject jsonobject3 = jsonarray.createNestedObject();
-                    jsonobject3["NodeID"] = 4;
-                    jsonobject3["TofX"] = NULL;
-                    jsonobject3["TofY"] = NULL;
-                    jsonobject3["TofZ"] = NULL;
-                    jsonobject3["Unixtime"] = NULL;
-                    JsonObject jsonobject4 = jsonarray.createNestedObject();
-                    jsonobject4["NodeID"] = 3;
-                    jsonobject4["Pitch"] = NULL;
-                    jsonobject4["Roll"] = NULL;
-                    jsonobject4["Frekuensi"] = NULL;
-                    jsonobject4["Unixtime"] = NULL;
-                    datakirim = "";
-                    serializeJson(doc, datakirim);
-                    char kirim_loop[datakirim.length() + 1];
-                    datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                    if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                      Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                      if (!mesh.checkConnection()) {
-                        do {
-                          Serial.println(F("Reconnecting to mesh network..."));
-                        } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                      } else {
-                        Serial.println(F("Send fail, Test OK"));
-                      }
-                    }
+              } else if (NODE_4_RSSI >= NODE_3_RSSI) {
+                paket_pesan pesan = { 125, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_4);
+                bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+                if (!NODE_4) {
+                  paket_pesan pesan = { 1254, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                  RF24NetworkHeader header(/*to node*/ NODE_3);
+                  bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+                  Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+                  if (!NODE_3) {
+                    paket_pesan pesan = { 12543, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                    RF24NetworkHeader header(/*to node*/ NODE_Master);
+                    bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                    Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
                   }
                 }
               }
@@ -758,554 +438,134 @@ void loop() {
           delay(100);
         }
         digitalWrite(LED_BUILTIN, LOW);
-      }else if (NODE_3_RSSI >= NODE_2_RSSI && NODE_3_RSSI >= NODE_4_RSSI && NODE_3_RSSI >= NODE_5_RSSI) {
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-          JsonArray jsonarray = doc.to<JsonArray>();
-          JsonObject jsonobject = jsonarray.createNestedObject();
-          jsonobject["NodeID"] = node_asal;
-          jsonobject["Suhu"] = suhu;
-          jsonobject["Kelembapan"] = kelembapan;
-          jsonobject["Unixtime"] = now.unixtime();
-          JsonObject jsonobject1 = jsonarray.createNestedObject();
-          jsonobject1["NodeID"] = 3;
-          jsonobject1["Pitch"] = NULL;
-          jsonobject1["Roll"] = NULL;
-          jsonobject1["Frekuensi"] = NULL;
-          jsonobject1["Unixtime"] = NULL;
-          datakirim = "";
-          serializeJson(doc, datakirim);
-          char kirim_loop[datakirim.length() + 1];
-          datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-          if(NODE_2_RSSI >= NODE_4_RSSI && NODE_2_RSSI >= NODE_5_RSSI){
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = node_asal;
-              jsonobject["Suhu"] = suhu;
-              jsonobject["Kelembapan"] = kelembapan;
-              jsonobject["Unixtime"] = now.unixtime();
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = 3;
-              jsonobject1["Pitch"] = NULL;
-              jsonobject1["Roll"] = NULL;
-              jsonobject1["Frekuensi"] = NULL;
-              jsonobject1["Unixtime"] = NULL;
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = 2;
-              jsonobject2["Berat"] = NULL;
-              jsonobject2["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(NODE_4_RSSI >= NODE_5_RSSI){
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-                  JsonArray jsonarray = doc.to<JsonArray>();
-                  JsonObject jsonobject = jsonarray.createNestedObject();
-                  jsonobject["NodeID"] = node_asal;
-                  jsonobject["Suhu"] = suhu;
-                  jsonobject["Kelembapan"] = kelembapan;
-                  jsonobject["Unixtime"] = now.unixtime();
-                  JsonObject jsonobject1 = jsonarray.createNestedObject();
-                  jsonobject1["NodeID"] = 3;
-                  jsonobject1["Pitch"] = NULL;
-                  jsonobject1["Roll"] = NULL;
-                  jsonobject1["Frekuensi"] = NULL;
-                  jsonobject1["Unixtime"] = NULL;
-                  JsonObject jsonobject2 = jsonarray.createNestedObject();
-                  jsonobject2["NodeID"] = 2;
-                  jsonobject2["Berat"] = NULL;
-                  jsonobject2["Unixtime"] = NULL;
-                  JsonObject jsonobject3 = jsonarray.createNestedObject();
-                  jsonobject3["NodeID"] = 4;
-                  jsonobject3["TofX"] = NULL;
-                  jsonobject3["TofY"] = NULL;
-                  jsonobject3["TofZ"] = NULL;
-                  jsonobject3["Unixtime"] = NULL;
-                  datakirim = "";
-                  serializeJson(doc, datakirim);
-                  char kirim_loop[datakirim.length() + 1];
-                  datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                  if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-                    Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-                    JsonArray jsonarray = doc.to<JsonArray>();
-                    JsonObject jsonobject = jsonarray.createNestedObject();
-                    jsonobject["NodeID"] = node_asal;
-                    jsonobject["Suhu"] = suhu;
-                    jsonobject["Kelembapan"] = kelembapan;
-                    jsonobject["Unixtime"] = now.unixtime();
-                    JsonObject jsonobject1 = jsonarray.createNestedObject();
-                    jsonobject1["NodeID"] = 3;
-                    jsonobject1["Pitch"] = NULL;
-                    jsonobject1["Roll"] = NULL;
-                    jsonobject1["Frekuensi"] = NULL;
-                    jsonobject1["Unixtime"] = NULL;
-                    JsonObject jsonobject2 = jsonarray.createNestedObject();
-                    jsonobject2["NodeID"] = 2;
-                    jsonobject2["Berat"] = NULL;
-                    jsonobject2["Unixtime"] = NULL;
-                    JsonObject jsonobject3 = jsonarray.createNestedObject();
-                    jsonobject3["NodeID"] = 4;
-                    jsonobject3["TofX"] = NULL;
-                    jsonobject3["TofY"] = NULL;
-                    jsonobject3["TofZ"] = NULL;
-                    jsonobject3["Unixtime"] = NULL;
-                    JsonObject jsonobject4 = jsonarray.createNestedObject();
-                    jsonobject4["NodeID"] = 5;
-                    jsonobject4["usX"] = NULL;
-                    jsonobject4["usY"] = NULL;
-                    jsonobject4["usZ"] = NULL;
-                    jsonobject4["Unixtime"] = NULL;
-                    datakirim = "";
-                    serializeJson(doc, datakirim);
-                    char kirim_loop[datakirim.length() + 1];
-                    datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                    if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                      Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                      if (!mesh.checkConnection()) {
-                        do {
-                          Serial.println(F("Reconnecting to mesh network..."));
-                        } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                      } else {
-                        Serial.println(F("Send fail, Test OK"));
-                      }
-                    }
+      } else if (NODE_3_RSSI >= NODE_2_RSSI && NODE_3_RSSI >= NODE_4_RSSI && NODE_3_RSSI >= NODE_5_RSSI) {
+        paket_pesan pesan = { 1, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_3);
+        bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+        if (!NODE_3) {
+          if (NODE_2_RSSI >= NODE_4_RSSI && NODE_2_RSSI >= NODE_5_RSSI) {
+            paket_pesan pesan = { 13, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_2);
+            bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+            if (!NODE_2) {
+              if (NODE_4_RSSI >= NODE_5_RSSI) {
+                paket_pesan pesan = { 132, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_4);
+                bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+                if (!NODE_4) {
+                  paket_pesan pesan = { 1324, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                  RF24NetworkHeader header(/*to node*/ NODE_5);
+                  bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+                  Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+                  if (!NODE_5) {
+                    paket_pesan pesan = { 13245, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                    RF24NetworkHeader header(/*to node*/ NODE_Master);
+                    bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                    Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
                   }
                 }
-              }else if(NODE_5_RSSI >= NODE_4_RSSI){
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-                  JsonArray jsonarray = doc.to<JsonArray>();
-                  JsonObject jsonobject = jsonarray.createNestedObject();
-                  jsonobject["NodeID"] = node_asal;
-                  jsonobject["Suhu"] = suhu;
-                  jsonobject["Kelembapan"] = kelembapan;
-                  jsonobject["Unixtime"] = now.unixtime();
-                  JsonObject jsonobject1 = jsonarray.createNestedObject();
-                  jsonobject1["NodeID"] = 3;
-                  jsonobject1["Pitch"] = NULL;
-                  jsonobject1["Roll"] = NULL;
-                  jsonobject1["Frekuensi"] = NULL;
-                  jsonobject1["Unixtime"] = NULL;
-                  JsonObject jsonobject2 = jsonarray.createNestedObject();
-                  jsonobject2["NodeID"] = 2;
-                  jsonobject2["Berat"] = NULL;
-                  jsonobject2["Unixtime"] = NULL;
-                  JsonObject jsonobject3 = jsonarray.createNestedObject();
-                  jsonobject3["NodeID"] = 5;
-                  jsonobject3["usX"] = NULL;
-                  jsonobject3["usY"] = NULL;
-                  jsonobject3["usZ"] = NULL;
-                  jsonobject3["Unixtime"] = NULL;
-                  datakirim = "";
-                  serializeJson(doc, datakirim);
-                  char kirim_loop[datakirim.length() + 1];
-                  datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                  if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-                    Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-                    JsonArray jsonarray = doc.to<JsonArray>();
-                    JsonObject jsonobject = jsonarray.createNestedObject();
-                    jsonobject["NodeID"] = node_asal;
-                    jsonobject["Suhu"] = suhu;
-                    jsonobject["Kelembapan"] = kelembapan;
-                    jsonobject["Unixtime"] = now.unixtime();
-                    JsonObject jsonobject1 = jsonarray.createNestedObject();
-                    jsonobject1["NodeID"] = 3;
-                    jsonobject1["Pitch"] = NULL;
-                    jsonobject1["Roll"] = NULL;
-                    jsonobject1["Frekuensi"] = NULL;
-                    jsonobject1["Unixtime"] = NULL;
-                    JsonObject jsonobject2 = jsonarray.createNestedObject();
-                    jsonobject2["NodeID"] = 2;
-                    jsonobject2["Berat"] = NULL;
-                    jsonobject2["Unixtime"] = NULL;
-                    JsonObject jsonobject3 = jsonarray.createNestedObject();
-                    jsonobject3["NodeID"] = 5;
-                    jsonobject3["usX"] = NULL;
-                    jsonobject3["usY"] = NULL;
-                    jsonobject3["usZ"] = NULL;
-                    jsonobject3["Unixtime"] = NULL;
-                    JsonObject jsonobject4 = jsonarray.createNestedObject();
-                    jsonobject4["NodeID"] = 4;
-                    jsonobject4["TofX"] = NULL;
-                    jsonobject4["TofY"] = NULL;
-                    jsonobject4["TofZ"] = NULL;
-                    jsonobject4["Unixtime"] = NULL;
-                    datakirim = "";
-                    serializeJson(doc, datakirim);
-                    char kirim_loop[datakirim.length() + 1];
-                    datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                    if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                      Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                      if (!mesh.checkConnection()) {
-                        do {
-                          Serial.println(F("Reconnecting to mesh network..."));
-                        } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                      } else {
-                        Serial.println(F("Send fail, Test OK"));
-                      }
-                    }
+              } else if (NODE_5_RSSI >= NODE_4_RSSI) {
+                paket_pesan pesan = { 132, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_5);
+                bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+                if (!NODE_5) {
+                  paket_pesan pesan = { 1325, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                  RF24NetworkHeader header(/*to node*/ NODE_4);
+                  bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+                  Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+                  if (!NODE_4) {
+                    paket_pesan pesan = { 13254, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                    RF24NetworkHeader header(/*to node*/ NODE_Master);
+                    bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                    Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
                   }
                 }
               }
             }
-          }else if(NODE_4_RSSI >= NODE_2_RSSI && NODE_4_RSSI >= NODE_5_RSSI){
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = node_asal;
-              jsonobject["Suhu"] = suhu;
-              jsonobject["Kelembapan"] = kelembapan;
-              jsonobject["Unixtime"] = now.unixtime();
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = 3;
-              jsonobject1["Pitch"] = NULL;
-              jsonobject1["Roll"] = NULL;
-              jsonobject1["Frekuensi"] = NULL;
-              jsonobject1["Unixtime"] = NULL;
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = 4;
-              jsonobject2["TofX"] = NULL;
-              jsonobject2["TofY"] = NULL;
-              jsonobject2["TofZ"] = NULL;
-              jsonobject2["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(NODE_2_RSSI >= NODE_5_RSSI){
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-                  JsonArray jsonarray = doc.to<JsonArray>();
-                  JsonObject jsonobject = jsonarray.createNestedObject();
-                  jsonobject["NodeID"] = node_asal;
-                  jsonobject["Suhu"] = suhu;
-                  jsonobject["Kelembapan"] = kelembapan;
-                  jsonobject["Unixtime"] = now.unixtime();
-                  JsonObject jsonobject1 = jsonarray.createNestedObject();
-                  jsonobject1["NodeID"] = 3;
-                  jsonobject1["Pitch"] = NULL;
-                  jsonobject1["Roll"] = NULL;
-                  jsonobject1["Frekuensi"] = NULL;
-                  jsonobject1["Unixtime"] = NULL;
-                  JsonObject jsonobject2 = jsonarray.createNestedObject();
-                  jsonobject2["NodeID"] = 4;
-                  jsonobject2["TofX"] = NULL;
-                  jsonobject2["TofY"] = NULL;
-                  jsonobject2["TofZ"] = NULL;
-                  jsonobject2["Unixtime"] = NULL;
-                  JsonObject jsonobject3 = jsonarray.createNestedObject();
-                  jsonobject3["NodeID"] = 2;
-                  jsonobject3["Berat"] = NULL;
-                  jsonobject3["Unixtime"] = NULL;
-                  datakirim = "";
-                  serializeJson(doc, datakirim);
-                  char kirim_loop[datakirim.length() + 1];
-                  datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                  if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-                    Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-                    JsonArray jsonarray = doc.to<JsonArray>();
-                    JsonObject jsonobject = jsonarray.createNestedObject();
-                    jsonobject["NodeID"] = node_asal;
-                    jsonobject["Suhu"] = suhu;
-                    jsonobject["Kelembapan"] = kelembapan;
-                    jsonobject["Unixtime"] = now.unixtime();
-                    JsonObject jsonobject1 = jsonarray.createNestedObject();
-                    jsonobject1["NodeID"] = 3;
-                    jsonobject1["Pitch"] = NULL;
-                    jsonobject1["Roll"] = NULL;
-                    jsonobject1["Frekuensi"] = NULL;
-                    jsonobject1["Unixtime"] = NULL;
-                    JsonObject jsonobject2 = jsonarray.createNestedObject();
-                    jsonobject2["NodeID"] = 4;
-                    jsonobject2["TofX"] = NULL;
-                    jsonobject2["TofY"] = NULL;
-                    jsonobject2["TofZ"] = NULL;
-                    jsonobject2["Unixtime"] = NULL;
-                    JsonObject jsonobject3 = jsonarray.createNestedObject();
-                    jsonobject3["NodeID"] = 2;
-                    jsonobject3["Berat"] = NULL;
-                    jsonobject3["Unixtime"] = NULL;
-                    JsonObject jsonobject4 = jsonarray.createNestedObject();
-                    jsonobject4["NodeID"] = 5;
-                    jsonobject4["usX"] = NULL;
-                    jsonobject4["usY"] = NULL;
-                    jsonobject4["usZ"] = NULL;
-                    jsonobject4["Unixtime"] = NULL;
-                    datakirim = "";
-                    serializeJson(doc, datakirim);
-                    char kirim_loop[datakirim.length() + 1];
-                    datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                    if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                      Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                      if (!mesh.checkConnection()) {
-                        do {
-                          Serial.println(F("Reconnecting to mesh network..."));
-                        } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                      } else {
-                        Serial.println(F("Send fail, Test OK"));
-                      }
-                    }
+          } else if (NODE_4_RSSI >= NODE_2_RSSI && NODE_4_RSSI >= NODE_5_RSSI) {
+            paket_pesan pesan = { 13, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_4);
+            bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+            if (!NODE_4) {
+              if (NODE_2_RSSI >= NODE_5_RSSI) {
+                paket_pesan pesan = { 134, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_2);
+                bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+                if (!NODE_2) {
+                  paket_pesan pesan = { 1342, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                  RF24NetworkHeader header(/*to node*/ NODE_5);
+                  bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+                  Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+                  if (!NODE_5) {
+                    paket_pesan pesan = { 13425, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                    RF24NetworkHeader header(/*to node*/ NODE_Master);
+                    bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                    Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
                   }
                 }
-              }else if(NODE_5_RSSI >= NODE_2_RSSI){
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-                  JsonArray jsonarray = doc.to<JsonArray>();
-                  JsonObject jsonobject = jsonarray.createNestedObject();
-                  jsonobject["NodeID"] = node_asal;
-                  jsonobject["Suhu"] = suhu;
-                  jsonobject["Kelembapan"] = kelembapan;
-                  jsonobject["Unixtime"] = now.unixtime();
-                  JsonObject jsonobject1 = jsonarray.createNestedObject();
-                  jsonobject1["NodeID"] = 3;
-                  jsonobject1["Pitch"] = NULL;
-                  jsonobject1["Roll"] = NULL;
-                  jsonobject1["Frekuensi"] = NULL;
-                  jsonobject1["Unixtime"] = NULL;
-                  JsonObject jsonobject2 = jsonarray.createNestedObject();
-                  jsonobject2["NodeID"] = 4;
-                  jsonobject2["TofX"] = NULL;
-                  jsonobject2["TofY"] = NULL;
-                  jsonobject2["TofZ"] = NULL;
-                  jsonobject2["Unixtime"] = NULL;
-                  JsonObject jsonobject3 = jsonarray.createNestedObject();
-                  jsonobject3["NodeID"] = 5;
-                  jsonobject3["usX"] = NULL;
-                  jsonobject3["usY"] = NULL;
-                  jsonobject3["usZ"] = NULL;
-                  jsonobject3["Unixtime"] = NULL;
-                  datakirim = "";
-                  serializeJson(doc, datakirim);
-                  char kirim_loop[datakirim.length() + 1];
-                  datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                  if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-                    Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-                    JsonArray jsonarray = doc.to<JsonArray>();
-                    JsonObject jsonobject = jsonarray.createNestedObject();
-                    jsonobject["NodeID"] = node_asal;
-                    jsonobject["Suhu"] = suhu;
-                    jsonobject["Kelembapan"] = kelembapan;
-                    jsonobject["Unixtime"] = now.unixtime();
-                    JsonObject jsonobject1 = jsonarray.createNestedObject();
-                    jsonobject1["NodeID"] = 3;
-                    jsonobject1["Pitch"] = NULL;
-                    jsonobject1["Roll"] = NULL;
-                    jsonobject1["Frekuensi"] = NULL;
-                    jsonobject1["Unixtime"] = NULL;
-                    JsonObject jsonobject2 = jsonarray.createNestedObject();
-                    jsonobject2["NodeID"] = 4;
-                    jsonobject2["TofX"] = NULL;
-                    jsonobject2["TofY"] = NULL;
-                    jsonobject2["TofZ"] = NULL;
-                    jsonobject2["Unixtime"] = NULL;
-                    JsonObject jsonobject3 = jsonarray.createNestedObject();
-                    jsonobject3["NodeID"] = 5;
-                    jsonobject3["usX"] = NULL;
-                    jsonobject3["usY"] = NULL;
-                    jsonobject3["usZ"] = NULL;
-                    jsonobject3["Unixtime"] = NULL;
-                    JsonObject jsonobject4 = jsonarray.createNestedObject();
-                    jsonobject4["NodeID"] = 2;
-                    jsonobject4["Berat"] = NULL;
-                    jsonobject4["Unixtime"] = NULL;
-                    datakirim = "";
-                    serializeJson(doc, datakirim);
-                    char kirim_loop[datakirim.length() + 1];
-                    datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                    if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                      Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                      if (!mesh.checkConnection()) {
-                        do {
-                          Serial.println(F("Reconnecting to mesh network..."));
-                        } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                      } else {
-                        Serial.println(F("Send fail, Test OK"));
-                      }
-                    }
+              } else if (NODE_5_RSSI >= NODE_2_RSSI) {
+                paket_pesan pesan = { 134, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_5);
+                bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+                if (!NODE_5) {
+                  paket_pesan pesan = { 1345, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                  RF24NetworkHeader header(/*to node*/ NODE_2);
+                  bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+                  Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+                  if (!NODE_2) {
+                    paket_pesan pesan = { 13452, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                    RF24NetworkHeader header(/*to node*/ NODE_Master);
+                    bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                    Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
                   }
                 }
               }
             }
-          }else if(NODE_5_RSSI >= NODE_2_RSSI && NODE_5_RSSI >= NODE_4_RSSI){
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = node_asal;
-              jsonobject["Suhu"] = suhu;
-              jsonobject["Kelembapan"] = kelembapan;
-              jsonobject["Unixtime"] = now.unixtime();
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = 3;
-              jsonobject1["Pitch"] = NULL;
-              jsonobject1["Roll"] = NULL;
-              jsonobject1["Frekuensi"] = NULL;
-              jsonobject1["Unixtime"] = NULL;
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = 5;
-              jsonobject2["usX"] = NULL;
-              jsonobject2["usY"] = NULL;
-              jsonobject2["usZ"] = NULL;
-              jsonobject2["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(NODE_2_RSSI >= NODE_4_RSSI){
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-                  JsonArray jsonarray = doc.to<JsonArray>();
-                  JsonObject jsonobject = jsonarray.createNestedObject();
-                  jsonobject["NodeID"] = node_asal;
-                  jsonobject["Suhu"] = suhu;
-                  jsonobject["Kelembapan"] = kelembapan;
-                  jsonobject["Unixtime"] = now.unixtime();
-                  JsonObject jsonobject1 = jsonarray.createNestedObject();
-                  jsonobject1["NodeID"] = 3;
-                  jsonobject1["Pitch"] = NULL;
-                  jsonobject1["Roll"] = NULL;
-                  jsonobject1["Frekuensi"] = NULL;
-                  jsonobject1["Unixtime"] = NULL;
-                  JsonObject jsonobject2 = jsonarray.createNestedObject();
-                  jsonobject2["NodeID"] = 5;
-                  jsonobject2["usX"] = NULL;
-                  jsonobject2["usY"] = NULL;
-                  jsonobject2["usZ"] = NULL;
-                  jsonobject2["Unixtime"] = NULL;
-                  JsonObject jsonobject3 = jsonarray.createNestedObject();
-                  jsonobject3["NodeID"] = 2;
-                  jsonobject3["Berat"] = NULL;
-                  jsonobject3["Unixtime"] = NULL;
-                  datakirim = "";
-                  serializeJson(doc, datakirim);
-                  char kirim_loop[datakirim.length() + 1];
-                  datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                  if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-                    Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-                    JsonArray jsonarray = doc.to<JsonArray>();
-                    JsonObject jsonobject = jsonarray.createNestedObject();
-                    jsonobject["NodeID"] = node_asal;
-                    jsonobject["Suhu"] = suhu;
-                    jsonobject["Kelembapan"] = kelembapan;
-                    jsonobject["Unixtime"] = now.unixtime();
-                    JsonObject jsonobject1 = jsonarray.createNestedObject();
-                    jsonobject1["NodeID"] = 3;
-                    jsonobject1["Pitch"] = NULL;
-                    jsonobject1["Roll"] = NULL;
-                    jsonobject1["Frekuensi"] = NULL;
-                    jsonobject1["Unixtime"] = NULL;
-                    JsonObject jsonobject2 = jsonarray.createNestedObject();
-                    jsonobject2["NodeID"] = 5;
-                    jsonobject2["usX"] = NULL;
-                    jsonobject2["usY"] = NULL;
-                    jsonobject2["usZ"] = NULL;
-                    jsonobject2["Unixtime"] = NULL;
-                    JsonObject jsonobject3 = jsonarray.createNestedObject();
-                    jsonobject3["NodeID"] = 2;
-                    jsonobject3["Berat"] = NULL;
-                    jsonobject3["Unixtime"] = NULL;
-                    JsonObject jsonobject4 = jsonarray.createNestedObject();
-                    jsonobject4["NodeID"] = 4;
-                    jsonobject4["TofX"] = NULL;
-                    jsonobject4["TofY"] = NULL;
-                    jsonobject4["TofZ"] = NULL;
-                    jsonobject4["Unixtime"] = NULL;
-                    datakirim = "";
-                    serializeJson(doc, datakirim);
-                    char kirim_loop[datakirim.length() + 1];
-                    datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                    if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                      Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                      if (!mesh.checkConnection()) {
-                        do {
-                          Serial.println(F("Reconnecting to mesh network..."));
-                        } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                      } else {
-                        Serial.println(F("Send fail, Test OK"));
-                      }
-                    }
+          } else if (NODE_5_RSSI >= NODE_2_RSSI && NODE_5_RSSI >= NODE_4_RSSI) {
+            paket_pesan pesan = { 13, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_5);
+            bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+            if (!NODE_5) {
+              if (NODE_2_RSSI >= NODE_4_RSSI) {
+                paket_pesan pesan = { 135, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_2);
+                bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+                if (!NODE_2) {
+                  paket_pesan pesan = { 1352, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                  RF24NetworkHeader header(/*to node*/ NODE_4);
+                  bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+                  Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+                  if (!NODE_4) {
+                    paket_pesan pesan = { 13524, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                    RF24NetworkHeader header(/*to node*/ NODE_Master);
+                    bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                    Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
                   }
                 }
-              }else if(NODE_4_RSSI >= NODE_2_RSSI){
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-                  JsonArray jsonarray = doc.to<JsonArray>();
-                  JsonObject jsonobject = jsonarray.createNestedObject();
-                  jsonobject["NodeID"] = node_asal;
-                  jsonobject["Suhu"] = suhu;
-                  jsonobject["Kelembapan"] = kelembapan;
-                  jsonobject["Unixtime"] = now.unixtime();
-                  JsonObject jsonobject1 = jsonarray.createNestedObject();
-                  jsonobject1["NodeID"] = 3;
-                  jsonobject1["Pitch"] = NULL;
-                  jsonobject1["Roll"] = NULL;
-                  jsonobject1["Frekuensi"] = NULL;
-                  jsonobject1["Unixtime"] = NULL;
-                  JsonObject jsonobject2 = jsonarray.createNestedObject();
-                  jsonobject2["NodeID"] = 5;
-                  jsonobject2["usX"] = NULL;
-                  jsonobject2["usY"] = NULL;
-                  jsonobject2["usZ"] = NULL;
-                  jsonobject2["Unixtime"] = NULL;
-                  JsonObject jsonobject3 = jsonarray.createNestedObject();
-                  jsonobject3["NodeID"] = 4;
-                  jsonobject3["TofX"] = NULL;
-                  jsonobject3["TofY"] = NULL;
-                  jsonobject3["TofZ"] = NULL;
-                  jsonobject3["Unixtime"] = NULL;
-                  datakirim = "";
-                  serializeJson(doc, datakirim);
-                  char kirim_loop[datakirim.length() + 1];
-                  datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                  if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-                    Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-                    JsonArray jsonarray = doc.to<JsonArray>();
-                    JsonObject jsonobject = jsonarray.createNestedObject();
-                    jsonobject["NodeID"] = node_asal;
-                    jsonobject["Suhu"] = suhu;
-                    jsonobject["Kelembapan"] = kelembapan;
-                    jsonobject["Unixtime"] = now.unixtime();
-                    JsonObject jsonobject1 = jsonarray.createNestedObject();
-                    jsonobject1["NodeID"] = 3;
-                    jsonobject1["Pitch"] = NULL;
-                    jsonobject1["Roll"] = NULL;
-                    jsonobject1["Frekuensi"] = NULL;
-                    jsonobject1["Unixtime"] = NULL;
-                    JsonObject jsonobject2 = jsonarray.createNestedObject();
-                    jsonobject2["NodeID"] = 5;
-                    jsonobject2["usX"] = NULL;
-                    jsonobject2["usY"] = NULL;
-                    jsonobject2["usZ"] = NULL;
-                    jsonobject2["Unixtime"] = NULL;
-                    JsonObject jsonobject3 = jsonarray.createNestedObject();
-                    jsonobject3["NodeID"] = 4;
-                    jsonobject3["TofX"] = NULL;
-                    jsonobject3["TofY"] = NULL;
-                    jsonobject3["TofZ"] = NULL;
-                    jsonobject3["Unixtime"] = NULL;
-                    JsonObject jsonobject4 = jsonarray.createNestedObject();
-                    jsonobject4["NodeID"] = 2;
-                    jsonobject4["Berat"] = NULL;
-                    jsonobject4["Unixtime"] = NULL;
-                    datakirim = "";
-                    serializeJson(doc, datakirim);
-                    char kirim_loop[datakirim.length() + 1];
-                    datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                    if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                      Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                      if (!mesh.checkConnection()) {
-                        do {
-                          Serial.println(F("Reconnecting to mesh network..."));
-                        } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                      } else {
-                        Serial.println(F("Send fail, Test OK"));
-                      }
-                    }
+              } else if (NODE_4_RSSI >= NODE_2_RSSI) {
+                paket_pesan pesan = { 135, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_4);
+                bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+                if (!NODE_4) {
+                  paket_pesan pesan = { 1354, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                  RF24NetworkHeader header(/*to node*/ NODE_2);
+                  bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+                  Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+                  if (!NODE_2) {
+                    paket_pesan pesan = { 13542, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                    RF24NetworkHeader header(/*to node*/ NODE_Master);
+                    bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                    Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
                   }
                 }
               }
@@ -1315,554 +575,134 @@ void loop() {
           delay(100);
         }
         digitalWrite(LED_BUILTIN, LOW);
-      }else if (NODE_4_RSSI >= NODE_2_RSSI && NODE_4_RSSI >= NODE_3_RSSI && NODE_4_RSSI >= NODE_5_RSSI) {
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-          JsonArray jsonarray = doc.to<JsonArray>();
-          JsonObject jsonobject = jsonarray.createNestedObject();
-          jsonobject["NodeID"] = node_asal;
-          jsonobject["Suhu"] = suhu;
-          jsonobject["Kelembapan"] = kelembapan;
-          jsonobject["Unixtime"] = now.unixtime();
-          JsonObject jsonobject1 = jsonarray.createNestedObject();
-          jsonobject1["NodeID"] = 4;
-          jsonobject1["TofX"] = NULL;
-          jsonobject1["TofY"] = NULL;
-          jsonobject1["TofZ"] = NULL;
-          jsonobject1["Unixtime"] = NULL;
-          datakirim = "";
-          serializeJson(doc, datakirim);
-          char kirim_loop[datakirim.length() + 1];
-          datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-          if(NODE_2_RSSI >= NODE_3_RSSI && NODE_2_RSSI >= NODE_5_RSSI){
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = node_asal;
-              jsonobject["Suhu"] = suhu;
-              jsonobject["Kelembapan"] = kelembapan;
-              jsonobject["Unixtime"] = now.unixtime();
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = 4;
-              jsonobject1["TofX"] = NULL;
-              jsonobject1["TofY"] = NULL;
-              jsonobject1["TofZ"] = NULL;
-              jsonobject1["Unixtime"] = NULL;
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = 2;
-              jsonobject2["Berat"] = NULL;
-              jsonobject2["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(NODE_3_RSSI >= NODE_5_RSSI){
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-                  JsonArray jsonarray = doc.to<JsonArray>();
-                  JsonObject jsonobject = jsonarray.createNestedObject();
-                  jsonobject["NodeID"] = node_asal;
-                  jsonobject["Suhu"] = suhu;
-                  jsonobject["Kelembapan"] = kelembapan;
-                  jsonobject["Unixtime"] = now.unixtime();
-                  JsonObject jsonobject1 = jsonarray.createNestedObject();
-                  jsonobject1["NodeID"] = 4;
-                  jsonobject1["TofX"] = NULL;
-                  jsonobject1["TofY"] = NULL;
-                  jsonobject1["TofZ"] = NULL;
-                  jsonobject1["Unixtime"] = NULL;
-                  JsonObject jsonobject2 = jsonarray.createNestedObject();
-                  jsonobject2["NodeID"] = 2;
-                  jsonobject2["Berat"] = NULL;
-                  jsonobject2["Unixtime"] = NULL;
-                  JsonObject jsonobject3 = jsonarray.createNestedObject();
-                  jsonobject3["NodeID"] = 3;
-                  jsonobject3["Pitch"] = NULL;
-                  jsonobject3["Roll"] = NULL;
-                  jsonobject3["Frekuensi"] = NULL;
-                  jsonobject3["Unixtime"] = NULL;
-                  datakirim = "";
-                  serializeJson(doc, datakirim);
-                  char kirim_loop[datakirim.length() + 1];
-                  datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                  if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-                    Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-                    JsonArray jsonarray = doc.to<JsonArray>();
-                    JsonObject jsonobject = jsonarray.createNestedObject();
-                    jsonobject["NodeID"] = node_asal;
-                    jsonobject["Suhu"] = suhu;
-                    jsonobject["Kelembapan"] = kelembapan;
-                    jsonobject["Unixtime"] = now.unixtime();
-                    JsonObject jsonobject1 = jsonarray.createNestedObject();
-                    jsonobject1["NodeID"] = 4;
-                    jsonobject1["TofX"] = NULL;
-                    jsonobject1["TofY"] = NULL;
-                    jsonobject1["TofZ"] = NULL;
-                    jsonobject1["Unixtime"] = NULL;
-                    JsonObject jsonobject2 = jsonarray.createNestedObject();
-                    jsonobject2["NodeID"] = 2;
-                    jsonobject2["Berat"] = NULL;
-                    jsonobject2["Unixtime"] = NULL;
-                    JsonObject jsonobject3 = jsonarray.createNestedObject();
-                    jsonobject3["NodeID"] = 3;
-                    jsonobject3["Pitch"] = NULL;
-                    jsonobject3["Roll"] = NULL;
-                    jsonobject3["Frekuensi"] = NULL;
-                    jsonobject3["Unixtime"] = NULL;
-                    JsonObject jsonobject4 = jsonarray.createNestedObject();
-                    jsonobject4["NodeID"] = 5;
-                    jsonobject4["usX"] = NULL;
-                    jsonobject4["usY"] = NULL;
-                    jsonobject4["usZ"] = NULL;
-                    jsonobject4["Unixtime"] = NULL;
-                    datakirim = "";
-                    serializeJson(doc, datakirim);
-                    char kirim_loop[datakirim.length() + 1];
-                    datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                    if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                      Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                      if (!mesh.checkConnection()) {
-                        do {
-                          Serial.println(F("Reconnecting to mesh network..."));
-                        } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                      } else {
-                        Serial.println(F("Send fail, Test OK"));
-                      }
-                    }
+      } else if (NODE_4_RSSI >= NODE_2_RSSI && NODE_4_RSSI >= NODE_3_RSSI && NODE_4_RSSI >= NODE_5_RSSI) {
+        paket_pesan pesan = { 1, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_4);
+        bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+        if (!NODE_4) {
+          if (NODE_2_RSSI >= NODE_3_RSSI && NODE_2_RSSI >= NODE_5_RSSI) {
+            paket_pesan pesan = { 14, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_2);
+            bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+            if (!NODE_2) {
+              if (NODE_3_RSSI >= NODE_5_RSSI) {
+                paket_pesan pesan = { 142, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_3);
+                bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+                if (!NODE_3) {
+                  paket_pesan pesan = { 1423, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                  RF24NetworkHeader header(/*to node*/ NODE_5);
+                  bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+                  Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+                  if (!NODE_5) {
+                    paket_pesan pesan = { 14235, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                    RF24NetworkHeader header(/*to node*/ NODE_Master);
+                    bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                    Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
                   }
                 }
-              }else if(NODE_5_RSSI >= NODE_3_RSSI){
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-                  JsonArray jsonarray = doc.to<JsonArray>();
-                  JsonObject jsonobject = jsonarray.createNestedObject();
-                  jsonobject["NodeID"] = node_asal;
-                  jsonobject["Suhu"] = suhu;
-                  jsonobject["Kelembapan"] = kelembapan;
-                  jsonobject["Unixtime"] = now.unixtime();
-                  JsonObject jsonobject1 = jsonarray.createNestedObject();
-                  jsonobject1["NodeID"] = 4;
-                  jsonobject1["TofX"] = NULL;
-                  jsonobject1["TofY"] = NULL;
-                  jsonobject1["TofZ"] = NULL;
-                  jsonobject1["Unixtime"] = NULL;
-                  JsonObject jsonobject2 = jsonarray.createNestedObject();
-                  jsonobject2["NodeID"] = 2;
-                  jsonobject2["Berat"] = NULL;
-                  jsonobject2["Unixtime"] = NULL;
-                  JsonObject jsonobject3 = jsonarray.createNestedObject();
-                  jsonobject3["NodeID"] = 5;
-                  jsonobject3["usX"] = NULL;
-                  jsonobject3["usY"] = NULL;
-                  jsonobject3["usZ"] = NULL;
-                  jsonobject3["Unixtime"] = NULL;
-                  datakirim = "";
-                  serializeJson(doc, datakirim);
-                  char kirim_loop[datakirim.length() + 1];
-                  datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                  if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-                    Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-                    JsonArray jsonarray = doc.to<JsonArray>();
-                    JsonObject jsonobject = jsonarray.createNestedObject();
-                    jsonobject["NodeID"] = node_asal;
-                    jsonobject["Suhu"] = suhu;
-                    jsonobject["Kelembapan"] = kelembapan;
-                    jsonobject["Unixtime"] = now.unixtime();
-                    JsonObject jsonobject1 = jsonarray.createNestedObject();
-                    jsonobject1["NodeID"] = 4;
-                    jsonobject1["TofX"] = NULL;
-                    jsonobject1["TofY"] = NULL;
-                    jsonobject1["TofZ"] = NULL;
-                    jsonobject1["Unixtime"] = NULL;
-                    JsonObject jsonobject2 = jsonarray.createNestedObject();
-                    jsonobject2["NodeID"] = 2;
-                    jsonobject2["Berat"] = NULL;
-                    jsonobject2["Unixtime"] = NULL;
-                    JsonObject jsonobject3 = jsonarray.createNestedObject();
-                    jsonobject3["NodeID"] = 5;
-                    jsonobject3["usX"] = NULL;
-                    jsonobject3["usY"] = NULL;
-                    jsonobject3["usZ"] = NULL;
-                    jsonobject3["Unixtime"] = NULL;
-                    JsonObject jsonobject4 = jsonarray.createNestedObject();
-                    jsonobject4["NodeID"] = 3;
-                    jsonobject4["Pitch"] = NULL;
-                    jsonobject4["Roll"] = NULL;
-                    jsonobject4["Frekuensi"] = NULL;
-                    jsonobject4["Unixtime"] = NULL;
-                    datakirim = "";
-                    serializeJson(doc, datakirim);
-                    char kirim_loop[datakirim.length() + 1];
-                    datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                    if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                      Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                      if (!mesh.checkConnection()) {
-                        do {
-                          Serial.println(F("Reconnecting to mesh network..."));
-                        } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                      } else {
-                        Serial.println(F("Send fail, Test OK"));
-                      }
-                    }
+              } else if (NODE_5_RSSI >= NODE_3_RSSI) {
+                paket_pesan pesan = { 142, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_5);
+                bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+                if (!NODE_5) {
+                  paket_pesan pesan = { 1425, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                  RF24NetworkHeader header(/*to node*/ NODE_3);
+                  bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+                  Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+                  if (!NODE_3) {
+                    paket_pesan pesan = { 14253, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                    RF24NetworkHeader header(/*to node*/ NODE_Master);
+                    bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                    Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
                   }
                 }
               }
             }
-          }else if(NODE_3_RSSI >= NODE_2_RSSI && NODE_3_RSSI >= NODE_5_RSSI){
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = node_asal;
-              jsonobject["Suhu"] = suhu;
-              jsonobject["Kelembapan"] = kelembapan;
-              jsonobject["Unixtime"] = now.unixtime();
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = 4;
-              jsonobject1["TofX"] = NULL;
-              jsonobject1["TofY"] = NULL;
-              jsonobject1["TofZ"] = NULL;
-              jsonobject1["Unixtime"] = NULL;
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = 3;
-              jsonobject2["Pitch"] = NULL;
-              jsonobject2["Roll"] = NULL;
-              jsonobject2["Frekuensi"] = NULL;
-              jsonobject2["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(NODE_2_RSSI >= NODE_5_RSSI){
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-                  JsonArray jsonarray = doc.to<JsonArray>();
-                  JsonObject jsonobject = jsonarray.createNestedObject();
-                  jsonobject["NodeID"] = node_asal;
-                  jsonobject["Suhu"] = suhu;
-                  jsonobject["Kelembapan"] = kelembapan;
-                  jsonobject["Unixtime"] = now.unixtime();
-                  JsonObject jsonobject1 = jsonarray.createNestedObject();
-                  jsonobject1["NodeID"] = 4;
-                  jsonobject1["TofX"] = NULL;
-                  jsonobject1["TofY"] = NULL;
-                  jsonobject1["TofZ"] = NULL;
-                  jsonobject1["Unixtime"] = NULL;
-                  JsonObject jsonobject2 = jsonarray.createNestedObject();
-                  jsonobject2["NodeID"] = 3;
-                  jsonobject2["Pitch"] = NULL;
-                  jsonobject2["Roll"] = NULL;
-                  jsonobject2["Frekuensi"] = NULL;
-                  jsonobject2["Unixtime"] = NULL;
-                  JsonObject jsonobject3 = jsonarray.createNestedObject();
-                  jsonobject3["NodeID"] = 2;
-                  jsonobject3["Berat"] = NULL;
-                  jsonobject3["Unixtime"] = NULL;
-                  datakirim = "";
-                  serializeJson(doc, datakirim);
-                  char kirim_loop[datakirim.length() + 1];
-                  datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                  if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-                    Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-                    JsonArray jsonarray = doc.to<JsonArray>();
-                    JsonObject jsonobject = jsonarray.createNestedObject();
-                    jsonobject["NodeID"] = node_asal;
-                    jsonobject["Suhu"] = suhu;
-                    jsonobject["Kelembapan"] = kelembapan;
-                    jsonobject["Unixtime"] = now.unixtime();
-                    JsonObject jsonobject1 = jsonarray.createNestedObject();
-                    jsonobject1["NodeID"] = 4;
-                    jsonobject1["TofX"] = NULL;
-                    jsonobject1["TofY"] = NULL;
-                    jsonobject1["TofZ"] = NULL;
-                    jsonobject1["Unixtime"] = NULL;
-                    JsonObject jsonobject2 = jsonarray.createNestedObject();
-                    jsonobject2["NodeID"] = 3;
-                    jsonobject2["Pitch"] = NULL;
-                    jsonobject2["Roll"] = NULL;
-                    jsonobject2["Frekuensi"] = NULL;
-                    jsonobject2["Unixtime"] = NULL;
-                    JsonObject jsonobject3 = jsonarray.createNestedObject();
-                    jsonobject3["NodeID"] = 2;
-                    jsonobject3["Berat"] = NULL;
-                    jsonobject3["Unixtime"] = NULL;
-                    JsonObject jsonobject4 = jsonarray.createNestedObject();
-                    jsonobject4["NodeID"] = 5;
-                    jsonobject4["usX"] = NULL;
-                    jsonobject4["usY"] = NULL;
-                    jsonobject4["usZ"] = NULL;
-                    jsonobject4["Unixtime"] = NULL;
-                    datakirim = "";
-                    serializeJson(doc, datakirim);
-                    char kirim_loop[datakirim.length() + 1];
-                    datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                    if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                      Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                      if (!mesh.checkConnection()) {
-                        do {
-                          Serial.println(F("Reconnecting to mesh network..."));
-                        } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                      } else {
-                        Serial.println(F("Send fail, Test OK"));
-                      }
-                    }
+          } else if (NODE_3_RSSI >= NODE_2_RSSI && NODE_3_RSSI >= NODE_5_RSSI) {
+            paket_pesan pesan = { 14, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_3);
+            bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+            if (!NODE_3) {
+              if (NODE_2_RSSI >= NODE_5_RSSI) {
+                paket_pesan pesan = { 143, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_2);
+                bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+                if (!NODE_2) {
+                  paket_pesan pesan = { 1432, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                  RF24NetworkHeader header(/*to node*/ NODE_5);
+                  bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+                  Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+                  if (!NODE_5) {
+                    paket_pesan pesan = { 14325, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                    RF24NetworkHeader header(/*to node*/ NODE_Master);
+                    bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                    Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
                   }
                 }
-              }else if(NODE_5_RSSI >= NODE_2_RSSI){
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-                  JsonArray jsonarray = doc.to<JsonArray>();
-                  JsonObject jsonobject = jsonarray.createNestedObject();
-                  jsonobject["NodeID"] = node_asal;
-                  jsonobject["Suhu"] = suhu;
-                  jsonobject["Kelembapan"] = kelembapan;
-                  jsonobject["Unixtime"] = now.unixtime();
-                  JsonObject jsonobject1 = jsonarray.createNestedObject();
-                  jsonobject1["NodeID"] = 4;
-                  jsonobject1["TofX"] = NULL;
-                  jsonobject1["TofY"] = NULL;
-                  jsonobject1["TofZ"] = NULL;
-                  jsonobject1["Unixtime"] = NULL;
-                  JsonObject jsonobject2 = jsonarray.createNestedObject();
-                  jsonobject2["NodeID"] = 3;
-                  jsonobject2["Pitch"] = NULL;
-                  jsonobject2["Roll"] = NULL;
-                  jsonobject2["Frekuensi"] = NULL;
-                  jsonobject2["Unixtime"] = NULL;
-                  JsonObject jsonobject3 = jsonarray.createNestedObject();
-                  jsonobject3["NodeID"] = 5;
-                  jsonobject3["usX"] = NULL;
-                  jsonobject3["usY"] = NULL;
-                  jsonobject3["usZ"] = NULL;
-                  jsonobject3["Unixtime"] = NULL;
-                  datakirim = "";
-                  serializeJson(doc, datakirim);
-                  char kirim_loop[datakirim.length() + 1];
-                  datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                  if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-                    Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-                    JsonArray jsonarray = doc.to<JsonArray>();
-                    JsonObject jsonobject = jsonarray.createNestedObject();
-                    jsonobject["NodeID"] = node_asal;
-                    jsonobject["Suhu"] = suhu;
-                    jsonobject["Kelembapan"] = kelembapan;
-                    jsonobject["Unixtime"] = now.unixtime();
-                    JsonObject jsonobject1 = jsonarray.createNestedObject();
-                    jsonobject1["NodeID"] = 4;
-                    jsonobject1["TofX"] = NULL;
-                    jsonobject1["TofY"] = NULL;
-                    jsonobject1["TofZ"] = NULL;
-                    jsonobject1["Unixtime"] = NULL;
-                    JsonObject jsonobject2 = jsonarray.createNestedObject();
-                    jsonobject2["NodeID"] = 3;
-                    jsonobject2["Pitch"] = NULL;
-                    jsonobject2["Roll"] = NULL;
-                    jsonobject2["Frekuensi"] = NULL;
-                    jsonobject2["Unixtime"] = NULL;
-                    JsonObject jsonobject3 = jsonarray.createNestedObject();
-                    jsonobject3["NodeID"] = 5;
-                    jsonobject3["usX"] = NULL;
-                    jsonobject3["usY"] = NULL;
-                    jsonobject3["usZ"] = NULL;
-                    jsonobject3["Unixtime"] = NULL;
-                    JsonObject jsonobject4 = jsonarray.createNestedObject();
-                    jsonobject4["NodeID"] = 2;
-                    jsonobject4["Berat"] = NULL;
-                    jsonobject4["Unixtime"] = NULL;
-                    datakirim = "";
-                    serializeJson(doc, datakirim);
-                    char kirim_loop[datakirim.length() + 1];
-                    datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                    if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                      Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                      if (!mesh.checkConnection()) {
-                        do {
-                          Serial.println(F("Reconnecting to mesh network..."));
-                        } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                      } else {
-                        Serial.println(F("Send fail, Test OK"));
-                      }
-                    }
+              } else if (NODE_5_RSSI >= NODE_2_RSSI) {
+                paket_pesan pesan = { 143, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_5);
+                bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+                if (!NODE_5) {
+                  paket_pesan pesan = { 1435, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                  RF24NetworkHeader header(/*to node*/ NODE_2);
+                  bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+                  Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+                  if (!NODE_2) {
+                    paket_pesan pesan = { 14352, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                    RF24NetworkHeader header(/*to node*/ NODE_Master);
+                    bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                    Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
                   }
                 }
               }
             }
-          }else if(NODE_5_RSSI >= NODE_2_RSSI && NODE_5_RSSI >= NODE_3_RSSI){
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = node_asal;
-              jsonobject["Suhu"] = suhu;
-              jsonobject["Kelembapan"] = kelembapan;
-              jsonobject["Unixtime"] = now.unixtime();
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = 4;
-              jsonobject1["TofX"] = NULL;
-              jsonobject1["TofY"] = NULL;
-              jsonobject1["TofZ"] = NULL;
-              jsonobject1["Unixtime"] = NULL;
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = 5;
-              jsonobject2["usX"] = NULL;
-              jsonobject2["usY"] = NULL;
-              jsonobject2["usZ"] = NULL;
-              jsonobject2["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(NODE_2_RSSI >= NODE_3_RSSI){
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-                  JsonArray jsonarray = doc.to<JsonArray>();
-                  JsonObject jsonobject = jsonarray.createNestedObject();
-                  jsonobject["NodeID"] = node_asal;
-                  jsonobject["Suhu"] = suhu;
-                  jsonobject["Kelembapan"] = kelembapan;
-                  jsonobject["Unixtime"] = now.unixtime();
-                  JsonObject jsonobject1 = jsonarray.createNestedObject();
-                  jsonobject1["NodeID"] = 4;
-                  jsonobject1["TofX"] = NULL;
-                  jsonobject1["TofY"] = NULL;
-                  jsonobject1["TofZ"] = NULL;
-                  jsonobject1["Unixtime"] = NULL;
-                  JsonObject jsonobject2 = jsonarray.createNestedObject();
-                  jsonobject2["NodeID"] = 5;
-                  jsonobject2["usX"] = NULL;
-                  jsonobject2["usY"] = NULL;
-                  jsonobject2["usZ"] = NULL;
-                  jsonobject2["Unixtime"] = NULL;
-                  JsonObject jsonobject3 = jsonarray.createNestedObject();
-                  jsonobject3["NodeID"] = 2;
-                  jsonobject3["Berat"] = NULL;
-                  jsonobject3["Unixtime"] = NULL;
-                  datakirim = "";
-                  serializeJson(doc, datakirim);
-                  char kirim_loop[datakirim.length() + 1];
-                  datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                  if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-                    Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-                    JsonArray jsonarray = doc.to<JsonArray>();
-                    JsonObject jsonobject = jsonarray.createNestedObject();
-                    jsonobject["NodeID"] = node_asal;
-                    jsonobject["Suhu"] = suhu;
-                    jsonobject["Kelembapan"] = kelembapan;
-                    jsonobject["Unixtime"] = now.unixtime();
-                    JsonObject jsonobject1 = jsonarray.createNestedObject();
-                    jsonobject1["NodeID"] = 4;
-                    jsonobject1["TofX"] = NULL;
-                    jsonobject1["TofY"] = NULL;
-                    jsonobject1["TofZ"] = NULL;
-                    jsonobject1["Unixtime"] = NULL;
-                    JsonObject jsonobject2 = jsonarray.createNestedObject();
-                    jsonobject2["NodeID"] = 5;
-                    jsonobject2["usX"] = NULL;
-                    jsonobject2["usY"] = NULL;
-                    jsonobject2["usZ"] = NULL;
-                    jsonobject2["Unixtime"] = NULL;
-                    JsonObject jsonobject3 = jsonarray.createNestedObject();
-                    jsonobject3["NodeID"] = 2;
-                    jsonobject3["Berat"] = NULL;
-                    jsonobject3["Unixtime"] = NULL;
-                    JsonObject jsonobject4 = jsonarray.createNestedObject();
-                    jsonobject4["NodeID"] = 3;
-                    jsonobject4["Pitch"] = NULL;
-                    jsonobject4["Roll"] = NULL;
-                    jsonobject4["Frekuensi"] = NULL;
-                    jsonobject4["Unixtime"] = NULL;
-                    datakirim = "";
-                    serializeJson(doc, datakirim);
-                    char kirim_loop[datakirim.length() + 1];
-                    datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                    if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                      Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                      if (!mesh.checkConnection()) {
-                        do {
-                          Serial.println(F("Reconnecting to mesh network..."));
-                        } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                      } else {
-                        Serial.println(F("Send fail, Test OK"));
-                      }
-                    }
+          } else if (NODE_5_RSSI >= NODE_2_RSSI && NODE_5_RSSI >= NODE_3_RSSI) {
+            paket_pesan pesan = { 14, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_5);
+            bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+            if (!NODE_5) {
+              if (NODE_2_RSSI >= NODE_3_RSSI) {
+                paket_pesan pesan = { 145, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_2);
+                bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+                if (!NODE_2) {
+                  paket_pesan pesan = { 1452, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                  RF24NetworkHeader header(/*to node*/ NODE_3);
+                  bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+                  Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+                  if (!NODE_3) {
+                    paket_pesan pesan = { 14523, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                    RF24NetworkHeader header(/*to node*/ NODE_Master);
+                    bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                    Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
                   }
                 }
-              }else if(NODE_3_RSSI >= NODE_2_RSSI){
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-                  JsonArray jsonarray = doc.to<JsonArray>();
-                  JsonObject jsonobject = jsonarray.createNestedObject();
-                  jsonobject["NodeID"] = node_asal;
-                  jsonobject["Suhu"] = suhu;
-                  jsonobject["Kelembapan"] = kelembapan;
-                  jsonobject["Unixtime"] = now.unixtime();
-                  JsonObject jsonobject1 = jsonarray.createNestedObject();
-                  jsonobject1["NodeID"] = 4;
-                  jsonobject1["TofX"] = NULL;
-                  jsonobject1["TofY"] = NULL;
-                  jsonobject1["TofZ"] = NULL;
-                  jsonobject1["Unixtime"] = NULL;
-                  JsonObject jsonobject2 = jsonarray.createNestedObject();
-                  jsonobject2["NodeID"] = 5;
-                  jsonobject2["usX"] = NULL;
-                  jsonobject2["usY"] = NULL;
-                  jsonobject2["usZ"] = NULL;
-                  jsonobject2["Unixtime"] = NULL;
-                  JsonObject jsonobject3 = jsonarray.createNestedObject();
-                  jsonobject3["NodeID"] = 3;
-                  jsonobject3["Pitch"] = NULL;
-                  jsonobject3["Roll"] = NULL;
-                  jsonobject3["Frekuensi"] = NULL;
-                  jsonobject3["Unixtime"] = NULL;
-                  datakirim = "";
-                  serializeJson(doc, datakirim);
-                  char kirim_loop[datakirim.length() + 1];
-                  datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                  if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-                    Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-                    JsonArray jsonarray = doc.to<JsonArray>();
-                    JsonObject jsonobject = jsonarray.createNestedObject();
-                    jsonobject["NodeID"] = node_asal;
-                    jsonobject["Suhu"] = suhu;
-                    jsonobject["Kelembapan"] = kelembapan;
-                    jsonobject["Unixtime"] = now.unixtime();
-                    JsonObject jsonobject1 = jsonarray.createNestedObject();
-                    jsonobject1["NodeID"] = 4;
-                    jsonobject1["TofX"] = NULL;
-                    jsonobject1["TofY"] = NULL;
-                    jsonobject1["TofZ"] = NULL;
-                    jsonobject1["Unixtime"] = NULL;
-                    JsonObject jsonobject2 = jsonarray.createNestedObject();
-                    jsonobject2["NodeID"] = 5;
-                    jsonobject2["usX"] = NULL;
-                    jsonobject2["usY"] = NULL;
-                    jsonobject2["usZ"] = NULL;
-                    jsonobject2["Unixtime"] = NULL;
-                    JsonObject jsonobject3 = jsonarray.createNestedObject();
-                    jsonobject3["NodeID"] = 3;
-                    jsonobject3["Pitch"] = NULL;
-                    jsonobject3["Roll"] = NULL;
-                    jsonobject3["Frekuensi"] = NULL;
-                    jsonobject3["Unixtime"] = NULL;
-                    JsonObject jsonobject4 = jsonarray.createNestedObject();
-                    jsonobject4["NodeID"] = 2;
-                    jsonobject4["Berat"] = NULL;
-                    jsonobject4["Unixtime"] = NULL;
-                    datakirim = "";
-                    serializeJson(doc, datakirim);
-                    char kirim_loop[datakirim.length() + 1];
-                    datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                    if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                      Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                      if (!mesh.checkConnection()) {
-                        do {
-                          Serial.println(F("Reconnecting to mesh network..."));
-                        } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                      } else {
-                        Serial.println(F("Send fail, Test OK"));
-                      }
-                    }
+              } else if (NODE_3_RSSI >= NODE_2_RSSI) {
+                paket_pesan pesan = { 145, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_3);
+                bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+                if (!NODE_3) {
+                  paket_pesan pesan = { 1453, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                  RF24NetworkHeader header(/*to node*/ NODE_2);
+                  bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+                  Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+                  if (!NODE_2) {
+                    paket_pesan pesan = { 14532, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                    RF24NetworkHeader header(/*to node*/ NODE_Master);
+                    bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                    Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
                   }
                 }
               }
@@ -1872,554 +712,134 @@ void loop() {
           delay(100);
         }
         digitalWrite(LED_BUILTIN, LOW);
-      }else if (NODE_5_RSSI >= NODE_2_RSSI && NODE_5_RSSI >= NODE_3_RSSI && NODE_5_RSSI >= NODE_4_RSSI) {
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-          JsonArray jsonarray = doc.to<JsonArray>();
-          JsonObject jsonobject = jsonarray.createNestedObject();
-          jsonobject["NodeID"] = node_asal;
-          jsonobject["Suhu"] = suhu;
-          jsonobject["Kelembapan"] = kelembapan;
-          jsonobject["Unixtime"] = now.unixtime();
-          JsonObject jsonobject1 = jsonarray.createNestedObject();
-          jsonobject1["NodeID"] = 5;
-          jsonobject1["usX"] = NULL;
-          jsonobject1["usY"] = NULL;
-          jsonobject1["usZ"] = NULL;
-          jsonobject1["Unixtime"] = NULL;
-          datakirim = "";
-          serializeJson(doc, datakirim);
-          char kirim_loop[datakirim.length() + 1];
-          datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-          if(NODE_2_RSSI >= NODE_3_RSSI && NODE_2_RSSI >= NODE_4_RSSI){
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = node_asal;
-              jsonobject["Suhu"] = suhu;
-              jsonobject["Kelembapan"] = kelembapan;
-              jsonobject["Unixtime"] = now.unixtime();
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = 5;
-              jsonobject1["usX"] = NULL;
-              jsonobject1["usY"] = NULL;
-              jsonobject1["usZ"] = NULL;
-              jsonobject1["Unixtime"] = NULL;
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = 2;
-              jsonobject2["Berat"] = NULL;
-              jsonobject2["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(NODE_3_RSSI >= NODE_4_RSSI){
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-                  JsonArray jsonarray = doc.to<JsonArray>();
-                  JsonObject jsonobject = jsonarray.createNestedObject();
-                  jsonobject["NodeID"] = node_asal;
-                  jsonobject["Suhu"] = suhu;
-                  jsonobject["Kelembapan"] = kelembapan;
-                  jsonobject["Unixtime"] = now.unixtime();
-                  JsonObject jsonobject1 = jsonarray.createNestedObject();
-                  jsonobject1["NodeID"] = 5;
-                  jsonobject1["usX"] = NULL;
-                  jsonobject1["usY"] = NULL;
-                  jsonobject1["usZ"] = NULL;
-                  jsonobject1["Unixtime"] = NULL;
-                  JsonObject jsonobject2 = jsonarray.createNestedObject();
-                  jsonobject2["NodeID"] = 2;
-                  jsonobject2["Berat"] = NULL;
-                  jsonobject2["Unixtime"] = NULL;
-                  JsonObject jsonobject3 = jsonarray.createNestedObject();
-                  jsonobject3["NodeID"] = 3;
-                  jsonobject3["Pitch"] = NULL;
-                  jsonobject3["Roll"] = NULL;
-                  jsonobject3["Frekuensi"] = NULL;
-                  jsonobject3["Unixtime"] = NULL;
-                  datakirim = "";
-                  serializeJson(doc, datakirim);
-                  char kirim_loop[datakirim.length() + 1];
-                  datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                  if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-                    Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-                    JsonArray jsonarray = doc.to<JsonArray>();
-                    JsonObject jsonobject = jsonarray.createNestedObject();
-                    jsonobject["NodeID"] = node_asal;
-                    jsonobject["Suhu"] = suhu;
-                    jsonobject["Kelembapan"] = kelembapan;
-                    jsonobject["Unixtime"] = now.unixtime();
-                    JsonObject jsonobject1 = jsonarray.createNestedObject();
-                    jsonobject1["NodeID"] = 5;
-                    jsonobject1["usX"] = NULL;
-                    jsonobject1["usY"] = NULL;
-                    jsonobject1["usZ"] = NULL;
-                    jsonobject1["Unixtime"] = NULL;
-                    JsonObject jsonobject2 = jsonarray.createNestedObject();
-                    jsonobject2["NodeID"] = 2;
-                    jsonobject2["Berat"] = NULL;
-                    jsonobject2["Unixtime"] = NULL;
-                    JsonObject jsonobject3 = jsonarray.createNestedObject();
-                    jsonobject3["NodeID"] = 3;
-                    jsonobject3["Pitch"] = NULL;
-                    jsonobject3["Roll"] = NULL;
-                    jsonobject3["Frekuensi"] = NULL;
-                    jsonobject3["Unixtime"] = NULL;
-                    JsonObject jsonobject4 = jsonarray.createNestedObject();
-                    jsonobject4["NodeID"] = 4;
-                    jsonobject4["TofX"] = NULL;
-                    jsonobject4["TofY"] = NULL;
-                    jsonobject4["TofZ"] = NULL;
-                    jsonobject4["Unixtime"] = NULL;
-                    datakirim = "";
-                    serializeJson(doc, datakirim);
-                    char kirim_loop[datakirim.length() + 1];
-                    datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                    if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                      Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                      if (!mesh.checkConnection()) {
-                        do {
-                          Serial.println(F("Reconnecting to mesh network..."));
-                        } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                      } else {
-                        Serial.println(F("Send fail, Test OK"));
-                      }
-                    }
+      } else if (NODE_5_RSSI >= NODE_2_RSSI && NODE_5_RSSI >= NODE_3_RSSI && NODE_5_RSSI >= NODE_4_RSSI) {
+        paket_pesan pesan = { 1, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_5);
+        bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+        if (!NODE_5) {
+          if (NODE_2_RSSI >= NODE_3_RSSI && NODE_2_RSSI >= NODE_4_RSSI) {
+            paket_pesan pesan = { 15, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_2);
+            bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+            if (!NODE_2) {
+              if (NODE_3_RSSI >= NODE_4_RSSI) {
+                paket_pesan pesan = { 152, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_3);
+                bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+                if (!NODE_3) {
+                  paket_pesan pesan = { 1523, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                  RF24NetworkHeader header(/*to node*/ NODE_4);
+                  bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+                  Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+                  if (!NODE_4) {
+                    paket_pesan pesan = { 15234, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                    RF24NetworkHeader header(/*to node*/ NODE_Master);
+                    bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                    Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
                   }
                 }
-              }else if(NODE_4_RSSI >= NODE_3_RSSI){
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-                  JsonArray jsonarray = doc.to<JsonArray>();
-                  JsonObject jsonobject = jsonarray.createNestedObject();
-                  jsonobject["NodeID"] = node_asal;
-                  jsonobject["Suhu"] = suhu;
-                  jsonobject["Kelembapan"] = kelembapan;
-                  jsonobject["Unixtime"] = now.unixtime();
-                  JsonObject jsonobject1 = jsonarray.createNestedObject();
-                  jsonobject1["NodeID"] = 5;
-                  jsonobject1["usX"] = NULL;
-                  jsonobject1["usY"] = NULL;
-                  jsonobject1["usZ"] = NULL;
-                  jsonobject1["Unixtime"] = NULL;
-                  JsonObject jsonobject2 = jsonarray.createNestedObject();
-                  jsonobject2["NodeID"] = 2;
-                  jsonobject2["Berat"] = NULL;
-                  jsonobject2["Unixtime"] = NULL;
-                  JsonObject jsonobject3 = jsonarray.createNestedObject();
-                  jsonobject3["NodeID"] = 4;
-                  jsonobject3["TofX"] = NULL;
-                  jsonobject3["TofY"] = NULL;
-                  jsonobject3["TofZ"] = NULL;
-                  jsonobject3["Unixtime"] = NULL;
-                  datakirim = "";
-                  serializeJson(doc, datakirim);
-                  char kirim_loop[datakirim.length() + 1];
-                  datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                  if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-                    Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-                    JsonArray jsonarray = doc.to<JsonArray>();
-                    JsonObject jsonobject = jsonarray.createNestedObject();
-                    jsonobject["NodeID"] = node_asal;
-                    jsonobject["Suhu"] = suhu;
-                    jsonobject["Kelembapan"] = kelembapan;
-                    jsonobject["Unixtime"] = now.unixtime();
-                    JsonObject jsonobject1 = jsonarray.createNestedObject();
-                    jsonobject1["NodeID"] = 5;
-                    jsonobject1["usX"] = NULL;
-                    jsonobject1["usY"] = NULL;
-                    jsonobject1["usZ"] = NULL;
-                    jsonobject1["Unixtime"] = NULL;
-                    JsonObject jsonobject2 = jsonarray.createNestedObject();
-                    jsonobject2["NodeID"] = 2;
-                    jsonobject2["Berat"] = NULL;
-                    jsonobject2["Unixtime"] = NULL;
-                    JsonObject jsonobject3 = jsonarray.createNestedObject();
-                    jsonobject3["NodeID"] = 4;
-                    jsonobject3["TofX"] = NULL;
-                    jsonobject3["TofY"] = NULL;
-                    jsonobject3["TofZ"] = NULL;
-                    jsonobject3["Unixtime"] = NULL;
-                    JsonObject jsonobject4 = jsonarray.createNestedObject();
-                    jsonobject4["NodeID"] = 3;
-                    jsonobject4["Pitch"] = NULL;
-                    jsonobject4["Roll"] = NULL;
-                    jsonobject4["Frekuensi"] = NULL;
-                    jsonobject4["Unixtime"] = NULL;
-                    datakirim = "";
-                    serializeJson(doc, datakirim);
-                    char kirim_loop[datakirim.length() + 1];
-                    datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                    if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                      Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                      if (!mesh.checkConnection()) {
-                        do {
-                          Serial.println(F("Reconnecting to mesh network..."));
-                        } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                      } else {
-                        Serial.println(F("Send fail, Test OK"));
-                      }
-                    }
+              } else if (NODE_4_RSSI >= NODE_3_RSSI) {
+                paket_pesan pesan = { 152, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_4);
+                bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+                if (!NODE_4) {
+                  paket_pesan pesan = { 1524, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                  RF24NetworkHeader header(/*to node*/ NODE_3);
+                  bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+                  Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+                  if (!NODE_3) {
+                    paket_pesan pesan = { 15243, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                    RF24NetworkHeader header(/*to node*/ NODE_Master);
+                    bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                    Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
                   }
                 }
               }
             }
-          }else if(NODE_3_RSSI >= NODE_2_RSSI && NODE_3_RSSI >= NODE_4_RSSI){
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = node_asal;
-              jsonobject["Suhu"] = suhu;
-              jsonobject["Kelembapan"] = kelembapan;
-              jsonobject["Unixtime"] = now.unixtime();
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = 5;
-              jsonobject1["usX"] = NULL;
-              jsonobject1["usY"] = NULL;
-              jsonobject1["usZ"] = NULL;
-              jsonobject1["Unixtime"] = NULL;
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = 3;
-              jsonobject2["Pitch"] = NULL;
-              jsonobject2["Roll"] = NULL;
-              jsonobject2["Frekuensi"] = NULL;
-              jsonobject2["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(NODE_2_RSSI >= NODE_4_RSSI){
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-                  JsonArray jsonarray = doc.to<JsonArray>();
-                  JsonObject jsonobject = jsonarray.createNestedObject();
-                  jsonobject["NodeID"] = node_asal;
-                  jsonobject["Suhu"] = suhu;
-                  jsonobject["Kelembapan"] = kelembapan;
-                  jsonobject["Unixtime"] = now.unixtime();
-                  JsonObject jsonobject1 = jsonarray.createNestedObject();
-                  jsonobject1["NodeID"] = 5;
-                  jsonobject1["usX"] = NULL;
-                  jsonobject1["usY"] = NULL;
-                  jsonobject1["usZ"] = NULL;
-                  jsonobject1["Unixtime"] = NULL;
-                  JsonObject jsonobject2 = jsonarray.createNestedObject();
-                  jsonobject2["NodeID"] = 3;
-                  jsonobject2["Pitch"] = NULL;
-                  jsonobject2["Roll"] = NULL;
-                  jsonobject2["Frekuensi"] = NULL;
-                  jsonobject2["Unixtime"] = NULL;
-                  JsonObject jsonobject3 = jsonarray.createNestedObject();
-                  jsonobject3["NodeID"] = 2;
-                  jsonobject3["Berat"] = NULL;
-                  jsonobject3["Unixtime"] = NULL;
-                  datakirim = "";
-                  serializeJson(doc, datakirim);
-                  char kirim_loop[datakirim.length() + 1];
-                  datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                  if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-                    Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-                    JsonArray jsonarray = doc.to<JsonArray>();
-                    JsonObject jsonobject = jsonarray.createNestedObject();
-                    jsonobject["NodeID"] = node_asal;
-                    jsonobject["Suhu"] = suhu;
-                    jsonobject["Kelembapan"] = kelembapan;
-                    jsonobject["Unixtime"] = now.unixtime();
-                    JsonObject jsonobject1 = jsonarray.createNestedObject();
-                    jsonobject1["NodeID"] = 5;
-                    jsonobject1["usX"] = NULL;
-                    jsonobject1["usY"] = NULL;
-                    jsonobject1["usZ"] = NULL;
-                    jsonobject1["Unixtime"] = NULL;
-                    JsonObject jsonobject2 = jsonarray.createNestedObject();
-                    jsonobject2["NodeID"] = 3;
-                    jsonobject2["Pitch"] = NULL;
-                    jsonobject2["Roll"] = NULL;
-                    jsonobject2["Frekuensi"] = NULL;
-                    jsonobject2["Unixtime"] = NULL;
-                    JsonObject jsonobject3 = jsonarray.createNestedObject();
-                    jsonobject3["NodeID"] = 2;
-                    jsonobject3["Berat"] = NULL;
-                    jsonobject3["Unixtime"] = NULL;
-                    JsonObject jsonobject4 = jsonarray.createNestedObject();
-                    jsonobject4["NodeID"] = 4;
-                    jsonobject4["TofX"] = NULL;
-                    jsonobject4["TofY"] = NULL;
-                    jsonobject4["TofZ"] = NULL;
-                    jsonobject4["Unixtime"] = NULL;
-                    datakirim = "";
-                    serializeJson(doc, datakirim);
-                    char kirim_loop[datakirim.length() + 1];
-                    datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                    if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                      Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                      if (!mesh.checkConnection()) {
-                        do {
-                          Serial.println(F("Reconnecting to mesh network..."));
-                        } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                      } else {
-                        Serial.println(F("Send fail, Test OK"));
-                      }
-                    }
+          } else if (NODE_3_RSSI >= NODE_2_RSSI && NODE_3_RSSI >= NODE_4_RSSI) {
+            paket_pesan pesan = { 15, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_3);
+            bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+            if (!NODE_3) {
+              if (NODE_2_RSSI >= NODE_4_RSSI) {
+                paket_pesan pesan = { 153, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_2);
+                bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+                if (!NODE_2) {
+                  paket_pesan pesan = { 1532, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                  RF24NetworkHeader header(/*to node*/ NODE_4);
+                  bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+                  Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+                  if (!NODE_4) {
+                    paket_pesan pesan = { 15324, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                    RF24NetworkHeader header(/*to node*/ NODE_Master);
+                    bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                    Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
                   }
                 }
-              }else if(NODE_4_RSSI >= NODE_2_RSSI){
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-                  JsonArray jsonarray = doc.to<JsonArray>();
-                  JsonObject jsonobject = jsonarray.createNestedObject();
-                  jsonobject["NodeID"] = node_asal;
-                  jsonobject["Suhu"] = suhu;
-                  jsonobject["Kelembapan"] = kelembapan;
-                  jsonobject["Unixtime"] = now.unixtime();
-                  JsonObject jsonobject1 = jsonarray.createNestedObject();
-                  jsonobject1["NodeID"] = 5;
-                  jsonobject1["usX"] = NULL;
-                  jsonobject1["usY"] = NULL;
-                  jsonobject1["usZ"] = NULL;
-                  jsonobject1["Unixtime"] = NULL;
-                  JsonObject jsonobject2 = jsonarray.createNestedObject();
-                  jsonobject2["NodeID"] = 3;
-                  jsonobject2["Pitch"] = NULL;
-                  jsonobject2["Roll"] = NULL;
-                  jsonobject2["Frekuensi"] = NULL;
-                  jsonobject2["Unixtime"] = NULL;
-                  JsonObject jsonobject3 = jsonarray.createNestedObject();
-                  jsonobject3["NodeID"] = 4;
-                  jsonobject3["TofX"] = NULL;
-                  jsonobject3["TofY"] = NULL;
-                  jsonobject3["TofZ"] = NULL;
-                  jsonobject3["Unixtime"] = NULL;
-                  datakirim = "";
-                  serializeJson(doc, datakirim);
-                  char kirim_loop[datakirim.length() + 1];
-                  datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                  if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-                    Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-                    JsonArray jsonarray = doc.to<JsonArray>();
-                    JsonObject jsonobject = jsonarray.createNestedObject();
-                    jsonobject["NodeID"] = node_asal;
-                    jsonobject["Suhu"] = suhu;
-                    jsonobject["Kelembapan"] = kelembapan;
-                    jsonobject["Unixtime"] = now.unixtime();
-                    JsonObject jsonobject1 = jsonarray.createNestedObject();
-                    jsonobject1["NodeID"] = 5;
-                    jsonobject1["usX"] = NULL;
-                    jsonobject1["usY"] = NULL;
-                    jsonobject1["usZ"] = NULL;
-                    jsonobject1["Unixtime"] = NULL;
-                    JsonObject jsonobject2 = jsonarray.createNestedObject();
-                    jsonobject2["NodeID"] = 3;
-                    jsonobject2["Pitch"] = NULL;
-                    jsonobject2["Roll"] = NULL;
-                    jsonobject2["Frekuensi"] = NULL;
-                    jsonobject2["Unixtime"] = NULL;
-                    JsonObject jsonobject3 = jsonarray.createNestedObject();
-                    jsonobject3["NodeID"] = 4;
-                    jsonobject3["TofX"] = NULL;
-                    jsonobject3["TofY"] = NULL;
-                    jsonobject3["TofZ"] = NULL;
-                    jsonobject3["Unixtime"] = NULL;
-                    JsonObject jsonobject4 = jsonarray.createNestedObject();
-                    jsonobject4["NodeID"] = 2;
-                    jsonobject4["Berat"] = NULL;
-                    jsonobject4["Unixtime"] = NULL;
-                    datakirim = "";
-                    serializeJson(doc, datakirim);
-                    char kirim_loop[datakirim.length() + 1];
-                    datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                    if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                      Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                      if (!mesh.checkConnection()) {
-                        do {
-                          Serial.println(F("Reconnecting to mesh network..."));
-                        } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                      } else {
-                        Serial.println(F("Send fail, Test OK"));
-                      }
-                    }
+              } else if (NODE_4_RSSI >= NODE_2_RSSI) {
+                paket_pesan pesan = { 153, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_4);
+                bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+                if (!NODE_4) {
+                  paket_pesan pesan = { 1534, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                  RF24NetworkHeader header(/*to node*/ NODE_2);
+                  bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+                  Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+                  if (!NODE_2) {
+                    paket_pesan pesan = { 15342, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                    RF24NetworkHeader header(/*to node*/ NODE_Master);
+                    bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                    Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
                   }
                 }
               }
             }
-          }else if(NODE_4_RSSI >= NODE_2_RSSI && NODE_4_RSSI >= NODE_3_RSSI){
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = node_asal;
-              jsonobject["Suhu"] = suhu;
-              jsonobject["Kelembapan"] = kelembapan;
-              jsonobject["Unixtime"] = now.unixtime();
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = 5;
-              jsonobject1["usX"] = NULL;
-              jsonobject1["usY"] = NULL;
-              jsonobject1["usZ"] = NULL;
-              jsonobject1["Unixtime"] = NULL;
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = 4;
-              jsonobject2["TofX"] = NULL;
-              jsonobject2["TofY"] = NULL;
-              jsonobject2["TofZ"] = NULL;
-              jsonobject2["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(NODE_2_RSSI >= NODE_3_RSSI){
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-                  JsonArray jsonarray = doc.to<JsonArray>();
-                  JsonObject jsonobject = jsonarray.createNestedObject();
-                  jsonobject["NodeID"] = node_asal;
-                  jsonobject["Suhu"] = suhu;
-                  jsonobject["Kelembapan"] = kelembapan;
-                  jsonobject["Unixtime"] = now.unixtime();
-                  JsonObject jsonobject1 = jsonarray.createNestedObject();
-                  jsonobject1["NodeID"] = 5;
-                  jsonobject1["usX"] = NULL;
-                  jsonobject1["usY"] = NULL;
-                  jsonobject1["usZ"] = NULL;
-                  jsonobject1["Unixtime"] = NULL;
-                  JsonObject jsonobject2 = jsonarray.createNestedObject();
-                  jsonobject2["NodeID"] = 4;
-                  jsonobject2["TofX"] = NULL;
-                  jsonobject2["TofY"] = NULL;
-                  jsonobject2["TofZ"] = NULL;
-                  jsonobject2["Unixtime"] = NULL;
-                  JsonObject jsonobject3 = jsonarray.createNestedObject();
-                  jsonobject3["NodeID"] = 2;
-                  jsonobject3["Berat"] = NULL;
-                  jsonobject3["Unixtime"] = NULL;
-                  datakirim = "";
-                  serializeJson(doc, datakirim);
-                  char kirim_loop[datakirim.length() + 1];
-                  datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                  if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-                    Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-                    JsonArray jsonarray = doc.to<JsonArray>();
-                    JsonObject jsonobject = jsonarray.createNestedObject();
-                    jsonobject["NodeID"] = node_asal;
-                    jsonobject["Suhu"] = suhu;
-                    jsonobject["Kelembapan"] = kelembapan;
-                    jsonobject["Unixtime"] = now.unixtime();
-                    JsonObject jsonobject1 = jsonarray.createNestedObject();
-                    jsonobject1["NodeID"] = 5;
-                    jsonobject1["usX"] = NULL;
-                    jsonobject1["usY"] = NULL;
-                    jsonobject1["usZ"] = NULL;
-                    jsonobject1["Unixtime"] = NULL;
-                    JsonObject jsonobject2 = jsonarray.createNestedObject();
-                    jsonobject2["NodeID"] = 4;
-                    jsonobject2["TofX"] = NULL;
-                    jsonobject2["TofY"] = NULL;
-                    jsonobject2["TofZ"] = NULL;
-                    jsonobject2["Unixtime"] = NULL;
-                    JsonObject jsonobject3 = jsonarray.createNestedObject();
-                    jsonobject3["NodeID"] = 2;
-                    jsonobject3["Berat"] = NULL;
-                    jsonobject3["Unixtime"] = NULL;
-                    JsonObject jsonobject4 = jsonarray.createNestedObject();
-                    jsonobject4["NodeID"] = 3;
-                    jsonobject4["Pitch"] = NULL;
-                    jsonobject4["Roll"] = NULL;
-                    jsonobject4["Frekuensi"] = NULL;
-                    jsonobject4["Unixtime"] = NULL;
-                    datakirim = "";
-                    serializeJson(doc, datakirim);
-                    char kirim_loop[datakirim.length() + 1];
-                    datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                    if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                      Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                      if (!mesh.checkConnection()) {
-                        do {
-                          Serial.println(F("Reconnecting to mesh network..."));
-                        } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                      } else {
-                        Serial.println(F("Send fail, Test OK"));
-                      }
-                    }
+          } else if (NODE_4_RSSI >= NODE_2_RSSI && NODE_4_RSSI >= NODE_3_RSSI) {
+            paket_pesan pesan = { 15, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_4);
+            bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+            if (!NODE_4) {
+              if (NODE_2_RSSI >= NODE_3_RSSI) {
+                paket_pesan pesan = { 154, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_2);
+                bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+                if (!NODE_2) {
+                  paket_pesan pesan = { 1542, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                  RF24NetworkHeader header(/*to node*/ NODE_3);
+                  bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+                  Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+                  if (!NODE_3) {
+                    paket_pesan pesan = { 15423, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                    RF24NetworkHeader header(/*to node*/ NODE_Master);
+                    bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                    Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
                   }
                 }
-              }else if(NODE_3_RSSI >= NODE_2_RSSI){
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-                  JsonArray jsonarray = doc.to<JsonArray>();
-                  JsonObject jsonobject = jsonarray.createNestedObject();
-                  jsonobject["NodeID"] = node_asal;
-                  jsonobject["Suhu"] = suhu;
-                  jsonobject["Kelembapan"] = kelembapan;
-                  jsonobject["Unixtime"] = now.unixtime();
-                  JsonObject jsonobject1 = jsonarray.createNestedObject();
-                  jsonobject1["NodeID"] = 5;
-                  jsonobject1["usX"] = NULL;
-                  jsonobject1["usY"] = NULL;
-                  jsonobject1["usZ"] = NULL;
-                  jsonobject1["Unixtime"] = NULL;
-                  JsonObject jsonobject2 = jsonarray.createNestedObject();
-                  jsonobject2["NodeID"] = 4;
-                  jsonobject2["TofX"] = NULL;
-                  jsonobject2["TofY"] = NULL;
-                  jsonobject2["TofZ"] = NULL;
-                  jsonobject2["Unixtime"] = NULL;
-                  JsonObject jsonobject3 = jsonarray.createNestedObject();
-                  jsonobject3["NodeID"] = 3;
-                  jsonobject3["Pitch"] = NULL;
-                  jsonobject3["Roll"] = NULL;
-                  jsonobject3["Frekuensi"] = NULL;
-                  jsonobject3["Unixtime"] = NULL;
-                  datakirim = "";
-                  serializeJson(doc, datakirim);
-                  char kirim_loop[datakirim.length() + 1];
-                  datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                  if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-                    Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-                    JsonArray jsonarray = doc.to<JsonArray>();
-                    JsonObject jsonobject = jsonarray.createNestedObject();
-                    jsonobject["NodeID"] = node_asal;
-                    jsonobject["Suhu"] = suhu;
-                    jsonobject["Kelembapan"] = kelembapan;
-                    jsonobject["Unixtime"] = now.unixtime();
-                    JsonObject jsonobject1 = jsonarray.createNestedObject();
-                    jsonobject1["NodeID"] = 5;
-                    jsonobject1["usX"] = NULL;
-                    jsonobject1["usY"] = NULL;
-                    jsonobject1["usZ"] = NULL;
-                    jsonobject1["Unixtime"] = NULL;
-                    JsonObject jsonobject2 = jsonarray.createNestedObject();
-                    jsonobject2["NodeID"] = 4;
-                    jsonobject2["TofX"] = NULL;
-                    jsonobject2["TofY"] = NULL;
-                    jsonobject2["TofZ"] = NULL;
-                    jsonobject2["Unixtime"] = NULL;
-                    JsonObject jsonobject3 = jsonarray.createNestedObject();
-                    jsonobject3["NodeID"] = 3;
-                    jsonobject3["Pitch"] = NULL;
-                    jsonobject3["Roll"] = NULL;
-                    jsonobject3["Frekuensi"] = NULL;
-                    jsonobject3["Unixtime"] = NULL;
-                    JsonObject jsonobject4 = jsonarray.createNestedObject();
-                    jsonobject4["NodeID"] = 2;
-                    jsonobject4["Berat"] = NULL;
-                    jsonobject4["Unixtime"] = NULL;
-                    datakirim = "";
-                    serializeJson(doc, datakirim);
-                    char kirim_loop[datakirim.length() + 1];
-                    datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                    if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                      Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                      if (!mesh.checkConnection()) {
-                        do {
-                          Serial.println(F("Reconnecting to mesh network..."));
-                        } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                      } else {
-                        Serial.println(F("Send fail, Test OK"));
-                      }
-                    }
+              } else if (NODE_3_RSSI >= NODE_2_RSSI) {
+                paket_pesan pesan = { 154, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_3);
+                bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+                if (!NODE_3) {
+                  paket_pesan pesan = { 1543, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                  RF24NetworkHeader header(/*to node*/ NODE_2);
+                  bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+                  Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+                  if (!NODE_2) {
+                    paket_pesan pesan = { 15432, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                    RF24NetworkHeader header(/*to node*/ NODE_Master);
+                    bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                    Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
                   }
                 }
               }
@@ -2431,199 +851,48 @@ void loop() {
         digitalWrite(LED_BUILTIN, LOW);
       }
     }
-//==================================================POSISI NODE KE - 2==================================================
-    if (count == 1 && jumlahnode[0] == 2) {
+    //==================================================POSISI NODE KE - 2==================================================
+    if (pesan.ID == 2) {
       Serial.print("Received packet from NODE 2");
-      JsonObject NodeID_2 = doc[0];
-      int aNodeID_2 = NodeID_2["NodeID"];
-      int Berat = NodeID_2["Berat"];
-      uint32_t Unixtime = NodeID_2["Unixtime"];
-      JsonArray jsonarray = doc.to<JsonArray>();
-      JsonObject jsonobject = jsonarray.createNestedObject();
-      jsonobject["NodeID"] = aNodeID_2;
-      jsonobject["Berat"] = Berat;
-      jsonobject["Unixtime"] = Unixtime;
-      JsonObject jsonobject1 = jsonarray.createNestedObject();
-      jsonobject1["NodeID"] = node_asal;
-      jsonobject1["Suhu"] = suhu;
-      jsonobject1["Kelembapan"] = kelembapan;
-      jsonobject1["Unixtime"] = now.unixtime();
-      datakirim = "";
-      serializeJson(doc, datakirim);
-      char kirim_loop[datakirim.length() + 1];
-      datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
       BLEScanResults foundDevices = pBLEScan->start(scanTime, false);
       if (NODE_3_RSSI >= NODE_4_RSSI && NODE_3_RSSI >= NODE_5_RSSI) {
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-          JsonArray jsonarray = doc.to<JsonArray>();
-          JsonObject jsonobject = jsonarray.createNestedObject();
-          jsonobject["NodeID"] = aNodeID_2;
-          jsonobject["Berat"] = Berat;
-          jsonobject["Unixtime"] = Unixtime;
-          JsonObject jsonobject1 = jsonarray.createNestedObject();
-          jsonobject1["NodeID"] = node_asal;
-          jsonobject1["Suhu"] = suhu;
-          jsonobject1["Kelembapan"] = kelembapan;
-          jsonobject1["Unixtime"] = now.unixtime();
-          JsonObject jsonobject2 = jsonarray.createNestedObject();
-          jsonobject2["NodeID"] = 3;
-          jsonobject2["Pitch"] = NULL;
-          jsonobject2["Roll"] = NULL;
-          jsonobject2["Frekuensi"] = NULL;
-          jsonobject2["Unixtime"] = NULL;
-          datakirim = "";
-          serializeJson(doc, datakirim);
-          char kirim_loop[datakirim.length() + 1];
-          datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-          if(NODE_4_RSSI >= NODE_5_RSSI){
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = aNodeID_2;
-              jsonobject["Berat"] = Berat;
-              jsonobject["Unixtime"] = Unixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = node_asal;
-              jsonobject1["Suhu"] = suhu;
-              jsonobject1["Kelembapan"] = kelembapan;
-              jsonobject1["Unixtime"] = now.unixtime();
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = 3;
-              jsonobject2["Pitch"] = NULL;
-              jsonobject2["Roll"] = NULL;
-              jsonobject2["Frekuensi"] = NULL;
-              jsonobject2["Unixtime"] = NULL;
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 4;
-              jsonobject3["TofX"] = NULL;
-              jsonobject3["TofY"] = NULL;
-              jsonobject3["TofZ"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-                JsonArray jsonarray = doc.to<JsonArray>();
-                JsonObject jsonobject = jsonarray.createNestedObject();
-                jsonobject["NodeID"] = aNodeID_2;
-                jsonobject["Berat"] = Berat;
-                jsonobject["Unixtime"] = Unixtime;
-                JsonObject jsonobject1 = jsonarray.createNestedObject();
-                jsonobject1["NodeID"] = node_asal;
-                jsonobject1["Suhu"] = suhu;
-                jsonobject1["Kelembapan"] = kelembapan;
-                jsonobject1["Unixtime"] = now.unixtime();
-                JsonObject jsonobject2 = jsonarray.createNestedObject();
-                jsonobject2["NodeID"] = 3;
-                jsonobject2["Pitch"] = NULL;
-                jsonobject2["Roll"] = NULL;
-                jsonobject2["Frekuensi"] = NULL;
-                jsonobject2["Unixtime"] = NULL;
-                JsonObject jsonobject3 = jsonarray.createNestedObject();
-                jsonobject3["NodeID"] = 4;
-                jsonobject3["TofX"] = NULL;
-                jsonobject3["TofY"] = NULL;
-                jsonobject3["TofZ"] = NULL;
-                jsonobject3["Unixtime"] = NULL;
-                JsonObject jsonobject4 = jsonarray.createNestedObject();
-                jsonobject4["NodeID"] = 5;
-                jsonobject4["usX"] = NULL;
-                jsonobject4["usY"] = NULL;
-                jsonobject4["usZ"] = NULL;
-                jsonobject4["Unixtime"] = NULL;
-                datakirim = "";
-                serializeJson(doc, datakirim);
-                char kirim_loop[datakirim.length() + 1];
-                datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                  if (!mesh.checkConnection()) {
-                    do {
-                      Serial.println(F("Reconnecting to mesh network..."));
-                    } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                  } else {
-                    Serial.println(F("Send fail, Test OK"));
-                  }
-                }
+        paket_pesan pesan = { 21, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_3);
+        bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+        if (!NODE_3) {
+          if (NODE_4_RSSI >= NODE_5_RSSI) {
+            paket_pesan pesan = { 213, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_4);
+            bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+            if (!NODE_4) {
+              paket_pesan pesan = { 2134, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+              RF24NetworkHeader header(/*to node*/ NODE_5);
+              bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+              Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+              if (!NODE_5) {
+                paket_pesan pesan = { 21345, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_Master);
+                bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
               }
             }
-          }else if(NODE_5_RSSI >= NODE_4_RSSI){
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = aNodeID_2;
-              jsonobject["Berat"] = Berat;
-              jsonobject["Unixtime"] = Unixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = node_asal;
-              jsonobject1["Suhu"] = suhu;
-              jsonobject1["Kelembapan"] = kelembapan;
-              jsonobject1["Unixtime"] = now.unixtime();
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = 3;
-              jsonobject2["Pitch"] = NULL;
-              jsonobject2["Roll"] = NULL;
-              jsonobject2["Frekuensi"] = NULL;
-              jsonobject2["Unixtime"] = NULL;
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 5;
-              jsonobject3["usX"] = NULL;
-              jsonobject3["usY"] = NULL;
-              jsonobject3["usZ"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-                JsonArray jsonarray = doc.to<JsonArray>();
-                JsonObject jsonobject = jsonarray.createNestedObject();
-                jsonobject["NodeID"] = aNodeID_2;
-                jsonobject["Berat"] = Berat;
-                jsonobject["Unixtime"] = Unixtime;
-                JsonObject jsonobject1 = jsonarray.createNestedObject();
-                jsonobject1["NodeID"] = node_asal;
-                jsonobject1["Suhu"] = suhu;
-                jsonobject1["Kelembapan"] = kelembapan;
-                jsonobject1["Unixtime"] = now.unixtime();
-                JsonObject jsonobject2 = jsonarray.createNestedObject();
-                jsonobject2["NodeID"] = 3;
-                jsonobject2["Pitch"] = NULL;
-                jsonobject2["Roll"] = NULL;
-                jsonobject2["Frekuensi"] = NULL;
-                jsonobject2["Unixtime"] = NULL;
-                JsonObject jsonobject3 = jsonarray.createNestedObject();
-                jsonobject3["NodeID"] = 5;
-                jsonobject3["usX"] = NULL;
-                jsonobject3["usY"] = NULL;
-                jsonobject3["usZ"] = NULL;
-                jsonobject3["Unixtime"] = NULL;
-                JsonObject jsonobject4 = jsonarray.createNestedObject();
-                jsonobject4["NodeID"] = 4;
-                jsonobject4["TofX"] = NULL;
-                jsonobject4["TofY"] = NULL;
-                jsonobject4["TofZ"] = NULL;
-                jsonobject4["Unixtime"] = NULL;
-                datakirim = "";
-                serializeJson(doc, datakirim);
-                char kirim_loop[datakirim.length() + 1];
-                datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                  if (!mesh.checkConnection()) {
-                    do {
-                      Serial.println(F("Reconnecting to mesh network..."));
-                    } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                  } else {
-                    Serial.println(F("Send fail, Test OK"));
-                  }
-                }
+          } else if (NODE_5_RSSI >= NODE_4_RSSI) {
+            paket_pesan pesan = { 213, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_5);
+            bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+            if (!NODE_5) {
+              paket_pesan pesan = { 2135, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+              RF24NetworkHeader header(/*to node*/ NODE_4);
+              bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+              Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+              if (!NODE_4) {
+                paket_pesan pesan = { 21354, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_Master);
+                bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
               }
             }
           }
@@ -2631,177 +900,44 @@ void loop() {
           delay(100);
         }
         digitalWrite(LED_BUILTIN, LOW);
-      }else if (NODE_4_RSSI >= NODE_3_RSSI && NODE_4_RSSI >= NODE_5_RSSI) {
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-          JsonArray jsonarray = doc.to<JsonArray>();
-          JsonObject jsonobject = jsonarray.createNestedObject();
-          jsonobject["NodeID"] = aNodeID_2;
-          jsonobject["Berat"] = Berat;
-          jsonobject["Unixtime"] = Unixtime;
-          JsonObject jsonobject1 = jsonarray.createNestedObject();
-          jsonobject1["NodeID"] = node_asal;
-          jsonobject1["Suhu"] = suhu;
-          jsonobject1["Kelembapan"] = kelembapan;
-          jsonobject1["Unixtime"] = now.unixtime();
-          JsonObject jsonobject2 = jsonarray.createNestedObject();
-          jsonobject2["NodeID"] = 4;
-          jsonobject2["TofX"] = NULL;
-          jsonobject2["TofY"] = NULL;
-          jsonobject2["TofZ"] = NULL;
-          jsonobject2["Unixtime"] = NULL;
-          datakirim = "";
-          serializeJson(doc, datakirim);
-          char kirim_loop[datakirim.length() + 1];
-          datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-          if(NODE_3_RSSI >= NODE_5_RSSI){
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = aNodeID_2;
-              jsonobject["Berat"] = Berat;
-              jsonobject["Unixtime"] = Unixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = node_asal;
-              jsonobject1["Suhu"] = suhu;
-              jsonobject1["Kelembapan"] = kelembapan;
-              jsonobject1["Unixtime"] = now.unixtime();
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = 4;
-              jsonobject2["TofX"] = NULL;
-              jsonobject2["TofY"] = NULL;
-              jsonobject2["TofZ"] = NULL;
-              jsonobject2["Unixtime"] = NULL;
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 3;
-              jsonobject3["Pitch"] = NULL;
-              jsonobject3["Roll"] = NULL;
-              jsonobject3["Frekuensi"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-                JsonArray jsonarray = doc.to<JsonArray>();
-                JsonObject jsonobject = jsonarray.createNestedObject();
-                jsonobject["NodeID"] = aNodeID_2;
-                jsonobject["Berat"] = Berat;
-                jsonobject["Unixtime"] = Unixtime;
-                JsonObject jsonobject1 = jsonarray.createNestedObject();
-                jsonobject1["NodeID"] = node_asal;
-                jsonobject1["Suhu"] = suhu;
-                jsonobject1["Kelembapan"] = kelembapan;
-                jsonobject1["Unixtime"] = now.unixtime();
-                JsonObject jsonobject2 = jsonarray.createNestedObject();
-                jsonobject2["NodeID"] = 4;
-                jsonobject2["TofX"] = NULL;
-                jsonobject2["TofY"] = NULL;
-                jsonobject2["TofZ"] = NULL;
-                jsonobject2["Unixtime"] = NULL;
-                JsonObject jsonobject3 = jsonarray.createNestedObject();
-                jsonobject3["NodeID"] = 3;
-                jsonobject3["Pitch"] = NULL;
-                jsonobject3["Roll"] = NULL;
-                jsonobject3["Frekuensi"] = NULL;
-                jsonobject3["Unixtime"] = NULL;
-                JsonObject jsonobject4 = jsonarray.createNestedObject();
-                jsonobject4["NodeID"] = 5;
-                jsonobject4["usX"] = NULL;
-                jsonobject4["usY"] = NULL;
-                jsonobject4["usZ"] = NULL;
-                jsonobject4["Unixtime"] = NULL;
-                datakirim = "";
-                serializeJson(doc, datakirim);
-                char kirim_loop[datakirim.length() + 1];
-                datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                  if (!mesh.checkConnection()) {
-                    do {
-                      Serial.println(F("Reconnecting to mesh network..."));
-                    } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                  } else {
-                    Serial.println(F("Send fail, Test OK"));
-                  }
-                }
+      } else if (NODE_4_RSSI >= NODE_3_RSSI && NODE_4_RSSI >= NODE_5_RSSI) {
+        paket_pesan pesan = { 21, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_4);
+        bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+        if (!NODE_4) {
+          if (NODE_3_RSSI >= NODE_5_RSSI) {
+            paket_pesan pesan = { 214, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_3);
+            bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+            if (!NODE_3) {
+              paket_pesan pesan = { 2143, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+              RF24NetworkHeader header(/*to node*/ NODE_5);
+              bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+              Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+              if (!NODE_5) {
+                paket_pesan pesan = { 21435, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_Master);
+                bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
               }
             }
-          }else if(NODE_5_RSSI >= NODE_3_RSSI){
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = aNodeID_2;
-              jsonobject["Berat"] = Berat;
-              jsonobject["Unixtime"] = Unixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = node_asal;
-              jsonobject1["Suhu"] = suhu;
-              jsonobject1["Kelembapan"] = kelembapan;
-              jsonobject1["Unixtime"] = now.unixtime();
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = 4;
-              jsonobject2["TofX"] = NULL;
-              jsonobject2["TofY"] = NULL;
-              jsonobject2["TofZ"] = NULL;
-              jsonobject2["Unixtime"] = NULL;
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 5;
-              jsonobject3["usX"] = NULL;
-              jsonobject3["usY"] = NULL;
-              jsonobject3["usZ"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-                JsonArray jsonarray = doc.to<JsonArray>();
-                JsonObject jsonobject = jsonarray.createNestedObject();
-                jsonobject["NodeID"] = aNodeID_2;
-                jsonobject["Berat"] = Berat;
-                jsonobject["Unixtime"] = Unixtime;
-                JsonObject jsonobject1 = jsonarray.createNestedObject();
-                jsonobject1["NodeID"] = node_asal;
-                jsonobject1["Suhu"] = suhu;
-                jsonobject1["Kelembapan"] = kelembapan;
-                jsonobject1["Unixtime"] = now.unixtime();
-                JsonObject jsonobject2 = jsonarray.createNestedObject();
-                jsonobject2["NodeID"] = 4;
-                jsonobject2["TofX"] = NULL;
-                jsonobject2["TofY"] = NULL;
-                jsonobject2["TofZ"] = NULL;
-                jsonobject2["Unixtime"] = NULL;
-                JsonObject jsonobject3 = jsonarray.createNestedObject();
-                jsonobject3["NodeID"] = 5;
-                jsonobject3["usX"] = NULL;
-                jsonobject3["usY"] = NULL;
-                jsonobject3["usZ"] = NULL;
-                jsonobject3["Unixtime"] = NULL;
-                JsonObject jsonobject4 = jsonarray.createNestedObject();
-                jsonobject4["NodeID"] = 3;
-                jsonobject4["Pitch"] = NULL;
-                jsonobject4["Roll"] = NULL;
-                jsonobject4["Frekuensi"] = NULL;
-                jsonobject4["Unixtime"] = NULL;
-                datakirim = "";
-                serializeJson(doc, datakirim);
-                char kirim_loop[datakirim.length() + 1];
-                datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                  if (!mesh.checkConnection()) {
-                    do {
-                      Serial.println(F("Reconnecting to mesh network..."));
-                    } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                  } else {
-                    Serial.println(F("Send fail, Test OK"));
-                  }
-                }
+          } else if (NODE_5_RSSI >= NODE_3_RSSI) {
+            paket_pesan pesan = { 214, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_5);
+            bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+            if (!NODE_5) {
+              paket_pesan pesan = { 2145, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+              RF24NetworkHeader header(/*to node*/ NODE_3);
+              bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+              Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+              if (!NODE_3) {
+                paket_pesan pesan = { 21453, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_Master);
+                bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
               }
             }
           }
@@ -2809,177 +945,44 @@ void loop() {
           delay(100);
         }
         digitalWrite(LED_BUILTIN, LOW);
-      }else if (NODE_5_RSSI >= NODE_3_RSSI && NODE_5_RSSI >= NODE_4_RSSI) {
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-          JsonArray jsonarray = doc.to<JsonArray>();
-          JsonObject jsonobject = jsonarray.createNestedObject();
-          jsonobject["NodeID"] = aNodeID_2;
-          jsonobject["Berat"] = Berat;
-          jsonobject["Unixtime"] = Unixtime;
-          JsonObject jsonobject1 = jsonarray.createNestedObject();
-          jsonobject1["NodeID"] = node_asal;
-          jsonobject1["Suhu"] = suhu;
-          jsonobject1["Kelembapan"] = kelembapan;
-          jsonobject1["Unixtime"] = now.unixtime();
-          JsonObject jsonobject2 = jsonarray.createNestedObject();
-          jsonobject2["NodeID"] = 5;
-          jsonobject2["usX"] = NULL;
-          jsonobject2["usY"] = NULL;
-          jsonobject2["usZ"] = NULL;
-          jsonobject2["Unixtime"] = NULL;
-          datakirim = "";
-          serializeJson(doc, datakirim);
-          char kirim_loop[datakirim.length() + 1];
-          datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-          if(NODE_3_RSSI >= NODE_4_RSSI){
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = aNodeID_2;
-              jsonobject["Berat"] = Berat;
-              jsonobject["Unixtime"] = Unixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = node_asal;
-              jsonobject1["Suhu"] = suhu;
-              jsonobject1["Kelembapan"] = kelembapan;
-              jsonobject1["Unixtime"] = now.unixtime();
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = 5;
-              jsonobject2["usX"] = NULL;
-              jsonobject2["usY"] = NULL;
-              jsonobject2["usZ"] = NULL;
-              jsonobject2["Unixtime"] = NULL;
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 3;
-              jsonobject3["Pitch"] = NULL;
-              jsonobject3["Roll"] = NULL;
-              jsonobject3["Frekuensi"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-                JsonArray jsonarray = doc.to<JsonArray>();
-                JsonObject jsonobject = jsonarray.createNestedObject();
-                jsonobject["NodeID"] = aNodeID_2;
-                jsonobject["Berat"] = Berat;
-                jsonobject["Unixtime"] = Unixtime;
-                JsonObject jsonobject1 = jsonarray.createNestedObject();
-                jsonobject1["NodeID"] = node_asal;
-                jsonobject1["Suhu"] = suhu;
-                jsonobject1["Kelembapan"] = kelembapan;
-                jsonobject1["Unixtime"] = now.unixtime();
-                JsonObject jsonobject2 = jsonarray.createNestedObject();
-                jsonobject2["NodeID"] = 5;
-                jsonobject2["usX"] = NULL;
-                jsonobject2["usY"] = NULL;
-                jsonobject2["usZ"] = NULL;
-                jsonobject2["Unixtime"] = NULL;
-                JsonObject jsonobject3 = jsonarray.createNestedObject();
-                jsonobject3["NodeID"] = 3;
-                jsonobject3["Pitch"] = NULL;
-                jsonobject3["Roll"] = NULL;
-                jsonobject3["Frekuensi"] = NULL;
-                jsonobject3["Unixtime"] = NULL;
-                JsonObject jsonobject4 = jsonarray.createNestedObject();
-                jsonobject4["NodeID"] = 4;
-                jsonobject4["TofX"] = NULL;
-                jsonobject4["TofY"] = NULL;
-                jsonobject4["TofZ"] = NULL;
-                jsonobject4["Unixtime"] = NULL;
-                datakirim = "";
-                serializeJson(doc, datakirim);
-                char kirim_loop[datakirim.length() + 1];
-                datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                  if (!mesh.checkConnection()) {
-                    do {
-                      Serial.println(F("Reconnecting to mesh network..."));
-                    } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                  } else {
-                    Serial.println(F("Send fail, Test OK"));
-                  }
-                }
+      } else if (NODE_5_RSSI >= NODE_3_RSSI && NODE_5_RSSI >= NODE_4_RSSI) {
+        paket_pesan pesan = { 21, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_5);
+        bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+        if (!NODE_5) {
+          if (NODE_3_RSSI >= NODE_4_RSSI) {
+            paket_pesan pesan = { 215, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_3);
+            bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+            if (!NODE_3) {
+              paket_pesan pesan = { 2153, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+              RF24NetworkHeader header(/*to node*/ NODE_4);
+              bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+              Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+              if (!NODE_4) {
+                paket_pesan pesan = { 21534, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_Master);
+                bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
               }
             }
-          }else if(NODE_4_RSSI >= NODE_3_RSSI){
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = aNodeID_2;
-              jsonobject["Berat"] = Berat;
-              jsonobject["Unixtime"] = Unixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = node_asal;
-              jsonobject1["Suhu"] = suhu;
-              jsonobject1["Kelembapan"] = kelembapan;
-              jsonobject1["Unixtime"] = now.unixtime();
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = 5;
-              jsonobject2["usX"] = NULL;
-              jsonobject2["usY"] = NULL;
-              jsonobject2["usZ"] = NULL;
-              jsonobject2["Unixtime"] = NULL;
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 4;
-              jsonobject3["TofX"] = NULL;
-              jsonobject3["TofY"] = NULL;
-              jsonobject3["TofZ"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-                JsonArray jsonarray = doc.to<JsonArray>();
-                JsonObject jsonobject = jsonarray.createNestedObject();
-                jsonobject["NodeID"] = aNodeID_2;
-                jsonobject["Berat"] = Berat;
-                jsonobject["Unixtime"] = Unixtime;
-                JsonObject jsonobject1 = jsonarray.createNestedObject();
-                jsonobject1["NodeID"] = node_asal;
-                jsonobject1["Suhu"] = suhu;
-                jsonobject1["Kelembapan"] = kelembapan;
-                jsonobject1["Unixtime"] = now.unixtime();
-                JsonObject jsonobject2 = jsonarray.createNestedObject();
-                jsonobject2["NodeID"] = 5;
-                jsonobject2["usX"] = NULL;
-                jsonobject2["usY"] = NULL;
-                jsonobject2["usZ"] = NULL;
-                jsonobject2["Unixtime"] = NULL;
-                JsonObject jsonobject3 = jsonarray.createNestedObject();
-                jsonobject3["NodeID"] = 4;
-                jsonobject3["TofX"] = NULL;
-                jsonobject3["TofY"] = NULL;
-                jsonobject3["TofZ"] = NULL;
-                jsonobject3["Unixtime"] = NULL;
-                JsonObject jsonobject4 = jsonarray.createNestedObject();
-                jsonobject4["NodeID"] = 3;
-                jsonobject4["Pitch"] = NULL;
-                jsonobject4["Roll"] = NULL;
-                jsonobject4["Frekuensi"] = NULL;
-                jsonobject4["Unixtime"] = NULL;
-                datakirim = "";
-                serializeJson(doc, datakirim);
-                char kirim_loop[datakirim.length() + 1];
-                datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                  if (!mesh.checkConnection()) {
-                    do {
-                      Serial.println(F("Reconnecting to mesh network..."));
-                    } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                  } else {
-                    Serial.println(F("Send fail, Test OK"));
-                  }
-                }
+          } else if (NODE_4_RSSI >= NODE_3_RSSI) {
+            paket_pesan pesan = { 215, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_4);
+            bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+            if (!NODE_4) {
+              paket_pesan pesan = { 2154, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+              RF24NetworkHeader header(/*to node*/ NODE_3);
+              bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+              Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+              if (!NODE_3) {
+                paket_pesan pesan = { 21543, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_Master);
+                bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
               }
             }
           }
@@ -2989,202 +992,47 @@ void loop() {
         digitalWrite(LED_BUILTIN, LOW);
       }
     }
-    if (count == 1 && jumlahnode[0] == 3) {
+    if (pesan.ID == 3) {
       Serial.print("Received packet from NODE 3");
-      JsonObject NodeID_3 = doc[0];
-      int aNodeID_3 = NodeID_3["NodeID"];
-      int Pitch = NodeID_3["Pitch"];
-      int Roll = NodeID_3["Roll"];
-      int Frekuensi = NodeID_3["Frekuensi"];
-      uint32_t aUnixtime = NodeID_3["Unixtime"];
-      JsonArray jsonarray = doc.to<JsonArray>();
-      JsonObject jsonobject = jsonarray.createNestedObject();
-      jsonobject["NodeID"] = aNodeID_3;
-      jsonobject["Pitch"] = Pitch;
-      jsonobject["Roll"] = Roll;
-      jsonobject["Frekuensi"] = Frekuensi;
-      jsonobject["Unixtime"] = aUnixtime;
-      JsonObject jsonobject1 = jsonarray.createNestedObject();
-      jsonobject1["NodeID"] = node_asal;
-      jsonobject1["Suhu"] = suhu;
-      jsonobject1["Kelembapan"] = kelembapan;
-      jsonobject1["Unixtime"] = now.unixtime();
-      datakirim = "";
-      serializeJson(doc, datakirim);
-      char kirim_loop[datakirim.length() + 1];
-      datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
       BLEScanResults foundDevices = pBLEScan->start(scanTime, false);
       if (NODE_2_RSSI >= NODE_4_RSSI && NODE_2_RSSI >= NODE_5_RSSI) {
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-          JsonArray jsonarray = doc.to<JsonArray>();
-          JsonObject jsonobject = jsonarray.createNestedObject();
-          jsonobject["NodeID"] = aNodeID_3;
-          jsonobject["Pitch"] = Pitch;
-          jsonobject["Roll"] = Roll;
-          jsonobject["Frekuensi"] = Frekuensi;
-          jsonobject["Unixtime"] = aUnixtime;
-          JsonObject jsonobject1 = jsonarray.createNestedObject();
-          jsonobject1["NodeID"] = node_asal;
-          jsonobject1["Suhu"] = suhu;
-          jsonobject1["Kelembapan"] = kelembapan;
-          jsonobject1["Unixtime"] = now.unixtime();
-          JsonObject jsonobject2 = jsonarray.createNestedObject();
-          jsonobject2["NodeID"] = 2;
-          jsonobject2["Berat"] = NULL;
-          jsonobject2["Unixtime"] = NULL;
-          datakirim = "";
-          serializeJson(doc, datakirim);
-          char kirim_loop[datakirim.length() + 1];
-          datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-          if(NODE_4_RSSI >= NODE_5_RSSI){
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = aNodeID_3;
-              jsonobject["Pitch"] = Pitch;
-              jsonobject["Roll"] = Roll;
-              jsonobject["Frekuensi"] = Frekuensi;
-              jsonobject["Unixtime"] = aUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = node_asal;
-              jsonobject1["Suhu"] = suhu;
-              jsonobject1["Kelembapan"] = kelembapan;
-              jsonobject1["Unixtime"] = now.unixtime();
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = 2;
-              jsonobject2["Berat"] = NULL;
-              jsonobject2["Unixtime"] = NULL;
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 4;
-              jsonobject3["TofX"] = NULL;
-              jsonobject3["TofY"] = NULL;
-              jsonobject3["TofZ"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-                JsonArray jsonarray = doc.to<JsonArray>();
-                JsonObject jsonobject = jsonarray.createNestedObject();
-                jsonobject["NodeID"] = aNodeID_3;
-                jsonobject["Pitch"] = Pitch;
-                jsonobject["Roll"] = Roll;
-                jsonobject["Frekuensi"] = Frekuensi;
-                jsonobject["Unixtime"] = aUnixtime;
-                JsonObject jsonobject1 = jsonarray.createNestedObject();
-                jsonobject1["NodeID"] = node_asal;
-                jsonobject1["Suhu"] = suhu;
-                jsonobject1["Kelembapan"] = kelembapan;
-                jsonobject1["Unixtime"] = now.unixtime();
-                JsonObject jsonobject2 = jsonarray.createNestedObject();
-                jsonobject2["NodeID"] = 2;
-                jsonobject2["Berat"] = NULL;
-                jsonobject2["Unixtime"] = NULL;
-                JsonObject jsonobject3 = jsonarray.createNestedObject();
-                jsonobject3["NodeID"] = 4;
-                jsonobject3["TofX"] = NULL;
-                jsonobject3["TofY"] = NULL;
-                jsonobject3["TofZ"] = NULL;
-                jsonobject3["Unixtime"] = NULL;
-                JsonObject jsonobject4 = jsonarray.createNestedObject();
-                jsonobject4["NodeID"] = 5;
-                jsonobject4["usX"] = NULL;
-                jsonobject4["usY"] = NULL;
-                jsonobject4["usZ"] = NULL;
-                jsonobject4["Unixtime"] = NULL;
-                datakirim = "";
-                serializeJson(doc, datakirim);
-                char kirim_loop[datakirim.length() + 1];
-                datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                  if (!mesh.checkConnection()) {
-                    do {
-                      Serial.println(F("Reconnecting to mesh network..."));
-                    } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                  } else {
-                    Serial.println(F("Send fail, Test OK"));
-                  }
-                }
+        paket_pesan pesan = { 31, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_2);
+        bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+        if (!NODE_2) {
+          if (NODE_4_RSSI >= NODE_5_RSSI) {
+            paket_pesan pesan = { 312, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_4);
+            bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+            if (!NODE_4) {
+              paket_pesan pesan = { 3124, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+              RF24NetworkHeader header(/*to node*/ NODE_5);
+              bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+              Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+              if (!NODE_5) {
+                paket_pesan pesan = { 31245, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_Master);
+                bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
               }
             }
-          }else if(NODE_5_RSSI >= NODE_4_RSSI){
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = aNodeID_3;
-              jsonobject["Pitch"] = Pitch;
-              jsonobject["Roll"] = Roll;
-              jsonobject["Frekuensi"] = Frekuensi;
-              jsonobject["Unixtime"] = aUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = node_asal;
-              jsonobject1["Suhu"] = suhu;
-              jsonobject1["Kelembapan"] = kelembapan;
-              jsonobject1["Unixtime"] = now.unixtime();
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = 2;
-              jsonobject2["Berat"] = NULL;
-              jsonobject2["Unixtime"] = NULL;
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 5;
-              jsonobject3["usX"] = NULL;
-              jsonobject3["usY"] = NULL;
-              jsonobject3["usZ"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-                JsonArray jsonarray = doc.to<JsonArray>();
-                JsonObject jsonobject = jsonarray.createNestedObject();
-                jsonobject["NodeID"] = aNodeID_3;
-                jsonobject["Pitch"] = Pitch;
-                jsonobject["Roll"] = Roll;
-                jsonobject["Frekuensi"] = Frekuensi;
-                jsonobject["Unixtime"] = aUnixtime;
-                JsonObject jsonobject1 = jsonarray.createNestedObject();
-                jsonobject1["NodeID"] = node_asal;
-                jsonobject1["Suhu"] = suhu;
-                jsonobject1["Kelembapan"] = kelembapan;
-                jsonobject1["Unixtime"] = now.unixtime();
-                JsonObject jsonobject2 = jsonarray.createNestedObject();
-                jsonobject2["NodeID"] = 2;
-                jsonobject2["Berat"] = NULL;
-                jsonobject2["Unixtime"] = NULL;
-                JsonObject jsonobject3 = jsonarray.createNestedObject();
-                jsonobject3["NodeID"] = 5;
-                jsonobject3["usX"] = NULL;
-                jsonobject3["usY"] = NULL;
-                jsonobject3["usZ"] = NULL;
-                jsonobject3["Unixtime"] = NULL;
-                JsonObject jsonobject4 = jsonarray.createNestedObject();
-                jsonobject4["NodeID"] = 4;
-                jsonobject4["TofX"] = NULL;
-                jsonobject4["TofY"] = NULL;
-                jsonobject4["TofZ"] = NULL;
-                jsonobject4["Unixtime"] = NULL;
-                datakirim = "";
-                serializeJson(doc, datakirim);
-                char kirim_loop[datakirim.length() + 1];
-                datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                  if (!mesh.checkConnection()) {
-                    do {
-                      Serial.println(F("Reconnecting to mesh network..."));
-                    } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                  } else {
-                    Serial.println(F("Send fail, Test OK"));
-                  }
-                }
+          } else if (NODE_5_RSSI >= NODE_4_RSSI) {
+            paket_pesan pesan = { 312, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_5);
+            bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+            if (!NODE_5) {
+              paket_pesan pesan = { 3125, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+              RF24NetworkHeader header(/*to node*/ NODE_4);
+              bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+              Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+              if (!NODE_4) {
+                paket_pesan pesan = { 31254, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_Master);
+                bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
               }
             }
           }
@@ -3192,181 +1040,44 @@ void loop() {
           delay(100);
         }
         digitalWrite(LED_BUILTIN, LOW);
-      }else if (NODE_4_RSSI >= NODE_2_RSSI && NODE_4_RSSI >= NODE_5_RSSI) {
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-          JsonArray jsonarray = doc.to<JsonArray>();
-          JsonObject jsonobject = jsonarray.createNestedObject();
-          jsonobject["NodeID"] = aNodeID_3;
-          jsonobject["Pitch"] = Pitch;
-          jsonobject["Roll"] = Roll;
-          jsonobject["Frekuensi"] = Frekuensi;
-          jsonobject["Unixtime"] = aUnixtime;
-          JsonObject jsonobject1 = jsonarray.createNestedObject();
-          jsonobject1["NodeID"] = node_asal;
-          jsonobject1["Suhu"] = suhu;
-          jsonobject1["Kelembapan"] = kelembapan;
-          jsonobject1["Unixtime"] = now.unixtime();
-          JsonObject jsonobject2 = jsonarray.createNestedObject();
-          jsonobject2["NodeID"] = 4;
-          jsonobject2["TofX"] = NULL;
-          jsonobject2["TofY"] = NULL;
-          jsonobject2["TofZ"] = NULL;
-          jsonobject2["Unixtime"] = NULL;
-          datakirim = "";
-          serializeJson(doc, datakirim);
-          char kirim_loop[datakirim.length() + 1];
-          datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-          if(NODE_2_RSSI >= NODE_5_RSSI){
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = aNodeID_3;
-              jsonobject["Pitch"] = Pitch;
-              jsonobject["Roll"] = Roll;
-              jsonobject["Frekuensi"] = Frekuensi;
-              jsonobject["Unixtime"] = aUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = node_asal;
-              jsonobject1["Suhu"] = suhu;
-              jsonobject1["Kelembapan"] = kelembapan;
-              jsonobject1["Unixtime"] = now.unixtime();
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = 4;
-              jsonobject2["TofX"] = NULL;
-              jsonobject2["TofY"] = NULL;
-              jsonobject2["TofZ"] = NULL;
-              jsonobject2["Unixtime"] = NULL;
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 2;
-              jsonobject3["Berat"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-                JsonArray jsonarray = doc.to<JsonArray>();
-                JsonObject jsonobject = jsonarray.createNestedObject();
-                jsonobject["NodeID"] = aNodeID_3;
-                jsonobject["Pitch"] = Pitch;
-                jsonobject["Roll"] = Roll;
-                jsonobject["Frekuensi"] = Frekuensi;
-                jsonobject["Unixtime"] = aUnixtime;
-                JsonObject jsonobject1 = jsonarray.createNestedObject();
-                jsonobject1["NodeID"] = node_asal;
-                jsonobject1["Suhu"] = suhu;
-                jsonobject1["Kelembapan"] = kelembapan;
-                jsonobject1["Unixtime"] = now.unixtime();
-                JsonObject jsonobject2 = jsonarray.createNestedObject();
-                jsonobject2["NodeID"] = 4;
-                jsonobject2["TofX"] = NULL;
-                jsonobject2["TofY"] = NULL;
-                jsonobject2["TofZ"] = NULL;
-                jsonobject2["Unixtime"] = NULL;
-                JsonObject jsonobject3 = jsonarray.createNestedObject();
-                jsonobject3["NodeID"] = 2;
-                jsonobject3["Berat"] = NULL;
-                jsonobject3["Unixtime"] = NULL;
-                JsonObject jsonobject4 = jsonarray.createNestedObject();
-                jsonobject4["NodeID"] = 5;
-                jsonobject4["usX"] = NULL;
-                jsonobject4["usY"] = NULL;
-                jsonobject4["usZ"] = NULL;
-                jsonobject4["Unixtime"] = NULL;
-                datakirim = "";
-                serializeJson(doc, datakirim);
-                char kirim_loop[datakirim.length() + 1];
-                datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                  if (!mesh.checkConnection()) {
-                    do {
-                      Serial.println(F("Reconnecting to mesh network..."));
-                    } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                  } else {
-                    Serial.println(F("Send fail, Test OK"));
-                  }
-                }
+      } else if (NODE_4_RSSI >= NODE_2_RSSI && NODE_4_RSSI >= NODE_5_RSSI) {
+        paket_pesan pesan = { 31, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_4);
+        bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+        if (!NODE_4) {
+          if (NODE_2_RSSI >= NODE_5_RSSI) {
+            paket_pesan pesan = { 314, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_2);
+            bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+            if (!NODE_2) {
+              paket_pesan pesan = { 3142, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+              RF24NetworkHeader header(/*to node*/ NODE_5);
+              bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+              Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+              if (!NODE_5) {
+                paket_pesan pesan = { 31425, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_Master);
+                bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
               }
             }
-          }else if(NODE_5_RSSI >= NODE_2_RSSI){
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = aNodeID_3;
-              jsonobject["Pitch"] = Pitch;
-              jsonobject["Roll"] = Roll;
-              jsonobject["Frekuensi"] = Frekuensi;
-              jsonobject["Unixtime"] = aUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = node_asal;
-              jsonobject1["Suhu"] = suhu;
-              jsonobject1["Kelembapan"] = kelembapan;
-              jsonobject1["Unixtime"] = now.unixtime();
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = 4;
-              jsonobject2["TofX"] = NULL;
-              jsonobject2["TofY"] = NULL;
-              jsonobject2["TofZ"] = NULL;
-              jsonobject2["Unixtime"] = NULL;
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 5;
-              jsonobject3["usX"] = NULL;
-              jsonobject3["usY"] = NULL;
-              jsonobject3["usZ"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-                JsonArray jsonarray = doc.to<JsonArray>();
-                JsonObject jsonobject = jsonarray.createNestedObject();
-                jsonobject["NodeID"] = aNodeID_3;
-                jsonobject["Pitch"] = Pitch;
-                jsonobject["Roll"] = Roll;
-                jsonobject["Frekuensi"] = Frekuensi;
-                jsonobject["Unixtime"] = aUnixtime;
-                JsonObject jsonobject1 = jsonarray.createNestedObject();
-                jsonobject1["NodeID"] = node_asal;
-                jsonobject1["Suhu"] = suhu;
-                jsonobject1["Kelembapan"] = kelembapan;
-                jsonobject1["Unixtime"] = now.unixtime();
-                JsonObject jsonobject2 = jsonarray.createNestedObject();
-                jsonobject2["NodeID"] = 4;
-                jsonobject2["TofX"] = NULL;
-                jsonobject2["TofY"] = NULL;
-                jsonobject2["TofZ"] = NULL;
-                jsonobject2["Unixtime"] = NULL;
-                JsonObject jsonobject3 = jsonarray.createNestedObject();
-                jsonobject3["NodeID"] = 5;
-                jsonobject3["usX"] = NULL;
-                jsonobject3["usY"] = NULL;
-                jsonobject3["usZ"] = NULL;
-                jsonobject3["Unixtime"] = NULL;
-                JsonObject jsonobject4 = jsonarray.createNestedObject();
-                jsonobject4["NodeID"] = 2;
-                jsonobject4["Berat"] = NULL;
-                jsonobject4["Unixtime"] = NULL;
-                datakirim = "";
-                serializeJson(doc, datakirim);
-                char kirim_loop[datakirim.length() + 1];
-                datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                  if (!mesh.checkConnection()) {
-                    do {
-                      Serial.println(F("Reconnecting to mesh network..."));
-                    } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                  } else {
-                    Serial.println(F("Send fail, Test OK"));
-                  }
-                }
+          } else if (NODE_5_RSSI >= NODE_2_RSSI) {
+            paket_pesan pesan = { 314, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_5);
+            bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+            if (!NODE_5) {
+              paket_pesan pesan = { 3145, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+              RF24NetworkHeader header(/*to node*/ NODE_2);
+              bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+              Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+              if (!NODE_2) {
+                paket_pesan pesan = { 31452, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_Master);
+                bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
               }
             }
           }
@@ -3374,181 +1085,44 @@ void loop() {
           delay(100);
         }
         digitalWrite(LED_BUILTIN, LOW);
-      }else if (NODE_5_RSSI >= NODE_2_RSSI && NODE_5_RSSI >= NODE_4_RSSI) {
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-          JsonArray jsonarray = doc.to<JsonArray>();
-          JsonObject jsonobject = jsonarray.createNestedObject();
-          jsonobject["NodeID"] = aNodeID_3;
-          jsonobject["Pitch"] = Pitch;
-          jsonobject["Roll"] = Roll;
-          jsonobject["Frekuensi"] = Frekuensi;
-          jsonobject["Unixtime"] = aUnixtime;
-          JsonObject jsonobject1 = jsonarray.createNestedObject();
-          jsonobject1["NodeID"] = node_asal;
-          jsonobject1["Suhu"] = suhu;
-          jsonobject1["Kelembapan"] = kelembapan;
-          jsonobject1["Unixtime"] = now.unixtime();
-          JsonObject jsonobject2 = jsonarray.createNestedObject();
-          jsonobject2["NodeID"] = 5;
-          jsonobject2["usX"] = NULL;
-          jsonobject2["usY"] = NULL;
-          jsonobject2["usZ"] = NULL;
-          jsonobject2["Unixtime"] = NULL;
-          datakirim = "";
-          serializeJson(doc, datakirim);
-          char kirim_loop[datakirim.length() + 1];
-          datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-          if(NODE_2_RSSI >= NODE_4_RSSI){
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = aNodeID_3;
-              jsonobject["Pitch"] = Pitch;
-              jsonobject["Roll"] = Roll;
-              jsonobject["Frekuensi"] = Frekuensi;
-              jsonobject["Unixtime"] = aUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = node_asal;
-              jsonobject1["Suhu"] = suhu;
-              jsonobject1["Kelembapan"] = kelembapan;
-              jsonobject1["Unixtime"] = now.unixtime();
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = 5;
-              jsonobject2["usX"] = NULL;
-              jsonobject2["usY"] = NULL;
-              jsonobject2["usZ"] = NULL;
-              jsonobject2["Unixtime"] = NULL;
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 2;
-              jsonobject3["Berat"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-                JsonArray jsonarray = doc.to<JsonArray>();
-                JsonObject jsonobject = jsonarray.createNestedObject();
-                jsonobject["NodeID"] = aNodeID_3;
-                jsonobject["Pitch"] = Pitch;
-                jsonobject["Roll"] = Roll;
-                jsonobject["Frekuensi"] = Frekuensi;
-                jsonobject["Unixtime"] = aUnixtime;
-                JsonObject jsonobject1 = jsonarray.createNestedObject();
-                jsonobject1["NodeID"] = node_asal;
-                jsonobject1["Suhu"] = suhu;
-                jsonobject1["Kelembapan"] = kelembapan;
-                jsonobject1["Unixtime"] = now.unixtime();
-                JsonObject jsonobject2 = jsonarray.createNestedObject();
-                jsonobject2["NodeID"] = 5;
-                jsonobject2["usX"] = NULL;
-                jsonobject2["usY"] = NULL;
-                jsonobject2["usZ"] = NULL;
-                jsonobject2["Unixtime"] = NULL;
-                JsonObject jsonobject3 = jsonarray.createNestedObject();
-                jsonobject3["NodeID"] = 2;
-                jsonobject3["Berat"] = NULL;
-                jsonobject3["Unixtime"] = NULL;
-                JsonObject jsonobject4 = jsonarray.createNestedObject();
-                jsonobject4["NodeID"] = 4;
-                jsonobject4["TofX"] = NULL;
-                jsonobject4["TofY"] = NULL;
-                jsonobject4["TofZ"] = NULL;
-                jsonobject4["Unixtime"] = NULL;
-                datakirim = "";
-                serializeJson(doc, datakirim);
-                char kirim_loop[datakirim.length() + 1];
-                datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                  if (!mesh.checkConnection()) {
-                    do {
-                      Serial.println(F("Reconnecting to mesh network..."));
-                    } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                  } else {
-                    Serial.println(F("Send fail, Test OK"));
-                  }
-                }
+      } else if (NODE_5_RSSI >= NODE_2_RSSI && NODE_5_RSSI >= NODE_4_RSSI) {
+        paket_pesan pesan = { 31, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_5);
+        bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+        if (!NODE_5) {
+          if (NODE_2_RSSI >= NODE_4_RSSI) {
+            paket_pesan pesan = { 315, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_2);
+            bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+            if (!NODE_2) {
+              paket_pesan pesan = { 3152, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+              RF24NetworkHeader header(/*to node*/ NODE_4);
+              bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+              Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+              if (!NODE_4) {
+                paket_pesan pesan = { 31524, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_Master);
+                bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
               }
             }
-          }else if(NODE_4_RSSI >= NODE_2_RSSI){
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = aNodeID_3;
-              jsonobject["Pitch"] = Pitch;
-              jsonobject["Roll"] = Roll;
-              jsonobject["Frekuensi"] = Frekuensi;
-              jsonobject["Unixtime"] = aUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = node_asal;
-              jsonobject1["Suhu"] = suhu;
-              jsonobject1["Kelembapan"] = kelembapan;
-              jsonobject1["Unixtime"] = now.unixtime();
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = 5;
-              jsonobject2["usX"] = NULL;
-              jsonobject2["usY"] = NULL;
-              jsonobject2["usZ"] = NULL;
-              jsonobject2["Unixtime"] = NULL;
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 4;
-              jsonobject3["TofX"] = NULL;
-              jsonobject3["TofY"] = NULL;
-              jsonobject3["TofZ"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-                JsonArray jsonarray = doc.to<JsonArray>();
-                JsonObject jsonobject = jsonarray.createNestedObject();
-                jsonobject["NodeID"] = aNodeID_3;
-                jsonobject["Pitch"] = Pitch;
-                jsonobject["Roll"] = Roll;
-                jsonobject["Frekuensi"] = Frekuensi;
-                jsonobject["Unixtime"] = aUnixtime;
-                JsonObject jsonobject1 = jsonarray.createNestedObject();
-                jsonobject1["NodeID"] = node_asal;
-                jsonobject1["Suhu"] = suhu;
-                jsonobject1["Kelembapan"] = kelembapan;
-                jsonobject1["Unixtime"] = now.unixtime();
-                JsonObject jsonobject2 = jsonarray.createNestedObject();
-                jsonobject2["NodeID"] = 5;
-                jsonobject2["usX"] = NULL;
-                jsonobject2["usY"] = NULL;
-                jsonobject2["usZ"] = NULL;
-                jsonobject2["Unixtime"] = NULL;
-                JsonObject jsonobject3 = jsonarray.createNestedObject();
-                jsonobject3["NodeID"] = 4;
-                jsonobject3["TofX"] = NULL;
-                jsonobject3["TofY"] = NULL;
-                jsonobject3["TofZ"] = NULL;
-                jsonobject3["Unixtime"] = NULL;
-                JsonObject jsonobject4 = jsonarray.createNestedObject();
-                jsonobject4["NodeID"] = 2;
-                jsonobject4["Berat"] = NULL;
-                jsonobject4["Unixtime"] = NULL;
-                datakirim = "";
-                serializeJson(doc, datakirim);
-                char kirim_loop[datakirim.length() + 1];
-                datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                  if (!mesh.checkConnection()) {
-                    do {
-                      Serial.println(F("Reconnecting to mesh network..."));
-                    } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                  } else {
-                    Serial.println(F("Send fail, Test OK"));
-                  }
-                }
+          } else if (NODE_4_RSSI >= NODE_2_RSSI) {
+            paket_pesan pesan = { 315, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_4);
+            bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+            if (!NODE_4) {
+              paket_pesan pesan = { 3154, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+              RF24NetworkHeader header(/*to node*/ NODE_2);
+              bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+              Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+              if (!NODE_2) {
+                paket_pesan pesan = { 31542, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_Master);
+                bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
               }
             }
           }
@@ -3558,202 +1132,47 @@ void loop() {
         digitalWrite(LED_BUILTIN, LOW);
       }
     }
-    if (count == 1 && jumlahnode[0] == 4) {
+    if (pesan.ID == 4) {
       Serial.print("Received packet from NODE 4");
-      JsonObject NodeID_4 = doc[0];
-      int aNodeID_4 = NodeID_4["NodeID"];
-      int TofX = NodeID_4["TofX"];
-      int TofY = NodeID_4["TofY"];
-      int TofZ = NodeID_4["TofZ"];
-      uint32_t bUnixtime = NodeID_4["Unixtime"];
-      JsonArray jsonarray = doc.to<JsonArray>();
-      JsonObject jsonobject = jsonarray.createNestedObject();
-      jsonobject["NodeID"] = aNodeID_4;
-      jsonobject["TofX"] = TofX;
-      jsonobject["TofY"] = TofY;
-      jsonobject["TofZ"] = TofZ;
-      jsonobject["Unixtime"] = bUnixtime;
-      JsonObject jsonobject1 = jsonarray.createNestedObject();
-      jsonobject1["NodeID"] = node_asal;
-      jsonobject1["Suhu"] = suhu;
-      jsonobject1["Kelembapan"] = kelembapan;
-      jsonobject1["Unixtime"] = now.unixtime();
-      datakirim = "";
-      serializeJson(doc, datakirim);
-      char kirim_loop[datakirim.length() + 1];
-      datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
       BLEScanResults foundDevices = pBLEScan->start(scanTime, false);
       if (NODE_2_RSSI >= NODE_3_RSSI && NODE_2_RSSI >= NODE_5_RSSI) {
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-          JsonArray jsonarray = doc.to<JsonArray>();
-          JsonObject jsonobject = jsonarray.createNestedObject();
-          jsonobject["NodeID"] = aNodeID_4;
-          jsonobject["TofX"] = TofX;
-          jsonobject["TofY"] = TofY;
-          jsonobject["TofZ"] = TofZ;
-          jsonobject["Unixtime"] = bUnixtime;
-          JsonObject jsonobject1 = jsonarray.createNestedObject();
-          jsonobject1["NodeID"] = node_asal;
-          jsonobject1["Suhu"] = suhu;
-          jsonobject1["Kelembapan"] = kelembapan;
-          jsonobject1["Unixtime"] = now.unixtime();
-          JsonObject jsonobject2 = jsonarray.createNestedObject();
-          jsonobject2["NodeID"] = 2;
-          jsonobject2["Berat"] = NULL;
-          jsonobject2["Unixtime"] = NULL;
-          datakirim = "";
-          serializeJson(doc, datakirim);
-          char kirim_loop[datakirim.length() + 1];
-          datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-          if(NODE_3_RSSI >= NODE_5_RSSI){
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = aNodeID_4;
-              jsonobject["TofX"] = TofX;
-              jsonobject["TofY"] = TofY;
-              jsonobject["TofZ"] = TofZ;
-              jsonobject["Unixtime"] = bUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = node_asal;
-              jsonobject1["Suhu"] = suhu;
-              jsonobject1["Kelembapan"] = kelembapan;
-              jsonobject1["Unixtime"] = now.unixtime();
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = 2;
-              jsonobject2["Berat"] = NULL;
-              jsonobject2["Unixtime"] = NULL;
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 3;
-              jsonobject3["Pitch"] = NULL;
-              jsonobject3["Roll"] = NULL;
-              jsonobject3["Frekuensi"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-                JsonArray jsonarray = doc.to<JsonArray>();
-                JsonObject jsonobject = jsonarray.createNestedObject();
-                jsonobject["NodeID"] = aNodeID_4;
-                jsonobject["TofX"] = TofX;
-                jsonobject["TofY"] = TofY;
-                jsonobject["TofZ"] = TofZ;
-                jsonobject["Unixtime"] = bUnixtime;
-                JsonObject jsonobject1 = jsonarray.createNestedObject();
-                jsonobject1["NodeID"] = node_asal;
-                jsonobject1["Suhu"] = suhu;
-                jsonobject1["Kelembapan"] = kelembapan;
-                jsonobject1["Unixtime"] = now.unixtime();
-                JsonObject jsonobject2 = jsonarray.createNestedObject();
-                jsonobject2["NodeID"] = 2;
-                jsonobject2["Berat"] = NULL;
-                jsonobject2["Unixtime"] = NULL;
-                JsonObject jsonobject3 = jsonarray.createNestedObject();
-                jsonobject3["NodeID"] = 3;
-                jsonobject3["Pitch"] = NULL;
-                jsonobject3["Roll"] = NULL;
-                jsonobject3["Frekuensi"] = NULL;
-                jsonobject3["Unixtime"] = NULL;
-                JsonObject jsonobject4 = jsonarray.createNestedObject();
-                jsonobject4["NodeID"] = 5;
-                jsonobject4["usX"] = NULL;
-                jsonobject4["usY"] = NULL;
-                jsonobject4["usZ"] = NULL;
-                jsonobject4["Unixtime"] = NULL;
-                datakirim = "";
-                serializeJson(doc, datakirim);
-                char kirim_loop[datakirim.length() + 1];
-                datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                  if (!mesh.checkConnection()) {
-                    do {
-                      Serial.println(F("Reconnecting to mesh network..."));
-                    } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                  } else {
-                    Serial.println(F("Send fail, Test OK"));
-                  }
-                }
+        paket_pesan pesan = { 41, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_2);
+        bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+        if (!NODE_2) {
+          paket_pesan pesan = { 412, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+          if (NODE_3_RSSI >= NODE_5_RSSI) {
+            RF24NetworkHeader header(/*to node*/ NODE_3);
+            bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+            if (!NODE_3) {
+              paket_pesan pesan = { 4123, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+              RF24NetworkHeader header(/*to node*/ NODE_5);
+              bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+              Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+              if (!NODE_5) {
+                paket_pesan pesan = { 41235, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_Master);
+                bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
               }
             }
-          }else if(NODE_5_RSSI >= NODE_3_RSSI){
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = aNodeID_4;
-              jsonobject["TofX"] = TofX;
-              jsonobject["TofY"] = TofY;
-              jsonobject["TofZ"] = TofZ;
-              jsonobject["Unixtime"] = bUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = node_asal;
-              jsonobject1["Suhu"] = suhu;
-              jsonobject1["Kelembapan"] = kelembapan;
-              jsonobject1["Unixtime"] = now.unixtime();
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = 2;
-              jsonobject2["Berat"] = NULL;
-              jsonobject2["Unixtime"] = NULL;
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 5;
-              jsonobject3["usX"] = NULL;
-              jsonobject3["usY"] = NULL;
-              jsonobject3["usZ"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-                JsonArray jsonarray = doc.to<JsonArray>();
-                JsonObject jsonobject = jsonarray.createNestedObject();
-                jsonobject["NodeID"] = aNodeID_4;
-                jsonobject["TofX"] = TofX;
-                jsonobject["TofY"] = TofY;
-                jsonobject["TofZ"] = TofZ;
-                jsonobject["Unixtime"] = bUnixtime;
-                JsonObject jsonobject1 = jsonarray.createNestedObject();
-                jsonobject1["NodeID"] = node_asal;
-                jsonobject1["Suhu"] = suhu;
-                jsonobject1["Kelembapan"] = kelembapan;
-                jsonobject1["Unixtime"] = now.unixtime();
-                JsonObject jsonobject2 = jsonarray.createNestedObject();
-                jsonobject2["NodeID"] = 2;
-                jsonobject2["Berat"] = NULL;
-                jsonobject2["Unixtime"] = NULL;
-                JsonObject jsonobject3 = jsonarray.createNestedObject();
-                jsonobject3["NodeID"] = 5;
-                jsonobject3["usX"] = NULL;
-                jsonobject3["usY"] = NULL;
-                jsonobject3["usZ"] = NULL;
-                jsonobject3["Unixtime"] = NULL;
-                JsonObject jsonobject4 = jsonarray.createNestedObject();
-                jsonobject4["NodeID"] = 3;
-                jsonobject4["Pitch"] = NULL;
-                jsonobject4["Roll"] = NULL;
-                jsonobject4["Frekuensi"] = NULL;
-                jsonobject4["Unixtime"] = NULL;
-                datakirim = "";
-                serializeJson(doc, datakirim);
-                char kirim_loop[datakirim.length() + 1];
-                datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                  if (!mesh.checkConnection()) {
-                    do {
-                      Serial.println(F("Reconnecting to mesh network..."));
-                    } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                  } else {
-                    Serial.println(F("Send fail, Test OK"));
-                  }
-                }
+          } else if (NODE_5_RSSI >= NODE_3_RSSI) {
+            paket_pesan pesan = { 412, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_5);
+            bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+            if (!NODE_5) {
+              paket_pesan pesan = { 4125, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+              RF24NetworkHeader header(/*to node*/ NODE_3);
+              bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+              Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+              if (!NODE_3) {
+                paket_pesan pesan = { 41253, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_Master);
+                bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
               }
             }
           }
@@ -3761,181 +1180,44 @@ void loop() {
           delay(100);
         }
         digitalWrite(LED_BUILTIN, LOW);
-      }else if (NODE_3_RSSI >= NODE_2_RSSI && NODE_3_RSSI >= NODE_5_RSSI) {
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-          JsonArray jsonarray = doc.to<JsonArray>();
-          JsonObject jsonobject = jsonarray.createNestedObject();
-          jsonobject["NodeID"] = aNodeID_4;
-          jsonobject["TofX"] = TofX;
-          jsonobject["TofY"] = TofY;
-          jsonobject["TofZ"] = TofZ;
-          jsonobject["Unixtime"] = bUnixtime;
-          JsonObject jsonobject1 = jsonarray.createNestedObject();
-          jsonobject1["NodeID"] = node_asal;
-          jsonobject1["Suhu"] = suhu;
-          jsonobject1["Kelembapan"] = kelembapan;
-          jsonobject1["Unixtime"] = now.unixtime();
-          JsonObject jsonobject2 = jsonarray.createNestedObject();
-          jsonobject2["NodeID"] = 3;
-          jsonobject2["Pitch"] = NULL;
-          jsonobject2["Roll"] = NULL;
-          jsonobject2["Frekuensi"] = NULL;
-          jsonobject2["Unixtime"] = NULL;
-          datakirim = "";
-          serializeJson(doc, datakirim);
-          char kirim_loop[datakirim.length() + 1];
-          datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-          if(NODE_2_RSSI >= NODE_5_RSSI){
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = aNodeID_4;
-              jsonobject["TofX"] = TofX;
-              jsonobject["TofY"] = TofY;
-              jsonobject["TofZ"] = TofZ;
-              jsonobject["Unixtime"] = bUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = node_asal;
-              jsonobject1["Suhu"] = suhu;
-              jsonobject1["Kelembapan"] = kelembapan;
-              jsonobject1["Unixtime"] = now.unixtime();
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = 3;
-              jsonobject2["Pitch"] = NULL;
-              jsonobject2["Roll"] = NULL;
-              jsonobject2["Frekuensi"] = NULL;
-              jsonobject2["Unixtime"] = NULL;
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 2;
-              jsonobject3["Berat"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-                JsonArray jsonarray = doc.to<JsonArray>();
-                JsonObject jsonobject = jsonarray.createNestedObject();
-                jsonobject["NodeID"] = aNodeID_4;
-                jsonobject["TofX"] = TofX;
-                jsonobject["TofY"] = TofY;
-                jsonobject["TofZ"] = TofZ;
-                jsonobject["Unixtime"] = bUnixtime;
-                JsonObject jsonobject1 = jsonarray.createNestedObject();
-                jsonobject1["NodeID"] = node_asal;
-                jsonobject1["Suhu"] = suhu;
-                jsonobject1["Kelembapan"] = kelembapan;
-                jsonobject1["Unixtime"] = now.unixtime();
-                JsonObject jsonobject2 = jsonarray.createNestedObject();
-                jsonobject2["NodeID"] = 3;
-                jsonobject2["Pitch"] = NULL;
-                jsonobject2["Roll"] = NULL;
-                jsonobject2["Frekuensi"] = NULL;
-                jsonobject2["Unixtime"] = NULL;
-                JsonObject jsonobject3 = jsonarray.createNestedObject();
-                jsonobject3["NodeID"] = 2;
-                jsonobject3["Berat"] = NULL;
-                jsonobject3["Unixtime"] = NULL;
-                JsonObject jsonobject4 = jsonarray.createNestedObject();
-                jsonobject4["NodeID"] = 5;
-                jsonobject4["usX"] = NULL;
-                jsonobject4["usY"] = NULL;
-                jsonobject4["usZ"] = NULL;
-                jsonobject4["Unixtime"] = NULL;
-                datakirim = "";
-                serializeJson(doc, datakirim);
-                char kirim_loop[datakirim.length() + 1];
-                datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                  if (!mesh.checkConnection()) {
-                    do {
-                      Serial.println(F("Reconnecting to mesh network..."));
-                    } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                  } else {
-                    Serial.println(F("Send fail, Test OK"));
-                  }
-                }
+      } else if (NODE_3_RSSI >= NODE_2_RSSI && NODE_3_RSSI >= NODE_5_RSSI) {
+        paket_pesan pesan = { 41, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_3);
+        bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+        if (!NODE_3) {
+          paket_pesan pesan = { 413, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+          if (NODE_2_RSSI >= NODE_5_RSSI) {
+            RF24NetworkHeader header(/*to node*/ NODE_2);
+            bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+            if (!NODE_2) {
+              paket_pesan pesan = { 4132, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+              RF24NetworkHeader header(/*to node*/ NODE_5);
+              bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+              Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+              if (!NODE_5) {
+                paket_pesan pesan = { 41325, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_Master);
+                bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
               }
             }
-          }else if(NODE_5_RSSI >= NODE_2_RSSI){
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = aNodeID_4;
-              jsonobject["TofX"] = TofX;
-              jsonobject["TofY"] = TofY;
-              jsonobject["TofZ"] = TofZ;
-              jsonobject["Unixtime"] = bUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = node_asal;
-              jsonobject1["Suhu"] = suhu;
-              jsonobject1["Kelembapan"] = kelembapan;
-              jsonobject1["Unixtime"] = now.unixtime();
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = 3;
-              jsonobject2["Pitch"] = NULL;
-              jsonobject2["Roll"] = NULL;
-              jsonobject2["Frekuensi"] = NULL;
-              jsonobject2["Unixtime"] = NULL;
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 5;
-              jsonobject3["usX"] = NULL;
-              jsonobject3["usY"] = NULL;
-              jsonobject3["usZ"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-                JsonArray jsonarray = doc.to<JsonArray>();
-                JsonObject jsonobject = jsonarray.createNestedObject();
-                jsonobject["NodeID"] = aNodeID_4;
-                jsonobject["TofX"] = TofX;
-                jsonobject["TofY"] = TofY;
-                jsonobject["TofZ"] = TofZ;
-                jsonobject["Unixtime"] = bUnixtime;
-                JsonObject jsonobject1 = jsonarray.createNestedObject();
-                jsonobject1["NodeID"] = node_asal;
-                jsonobject1["Suhu"] = suhu;
-                jsonobject1["Kelembapan"] = kelembapan;
-                jsonobject1["Unixtime"] = now.unixtime();
-                JsonObject jsonobject2 = jsonarray.createNestedObject();
-                jsonobject2["NodeID"] = 3;
-                jsonobject2["Pitch"] = NULL;
-                jsonobject2["Roll"] = NULL;
-                jsonobject2["Frekuensi"] = NULL;
-                jsonobject2["Unixtime"] = NULL;
-                JsonObject jsonobject3 = jsonarray.createNestedObject();
-                jsonobject3["NodeID"] = 5;
-                jsonobject3["usX"] = NULL;
-                jsonobject3["usY"] = NULL;
-                jsonobject3["usZ"] = NULL;
-                jsonobject3["Unixtime"] = NULL;
-                JsonObject jsonobject4 = jsonarray.createNestedObject();
-                jsonobject4["NodeID"] = 2;
-                jsonobject4["Berat"] = NULL;
-                jsonobject4["Unixtime"] = NULL;
-                datakirim = "";
-                serializeJson(doc, datakirim);
-                char kirim_loop[datakirim.length() + 1];
-                datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                  if (!mesh.checkConnection()) {
-                    do {
-                      Serial.println(F("Reconnecting to mesh network..."));
-                    } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                  } else {
-                    Serial.println(F("Send fail, Test OK"));
-                  }
-                }
+          } else if (NODE_5_RSSI >= NODE_2_RSSI) {
+            paket_pesan pesan = { 413, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_5);
+            bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+            if (!NODE_5) {
+              paket_pesan pesan = { 4135, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+              RF24NetworkHeader header(/*to node*/ NODE_2);
+              bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+              Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+              if (!NODE_2) {
+                paket_pesan pesan = { 41352, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_Master);
+                bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
               }
             }
           }
@@ -3943,181 +1225,44 @@ void loop() {
           delay(100);
         }
         digitalWrite(LED_BUILTIN, LOW);
-      }else if (NODE_5_RSSI >= NODE_2_RSSI && NODE_5_RSSI >= NODE_3_RSSI) {
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-          JsonArray jsonarray = doc.to<JsonArray>();
-          JsonObject jsonobject = jsonarray.createNestedObject();
-          jsonobject["NodeID"] = aNodeID_4;
-          jsonobject["TofX"] = TofX;
-          jsonobject["TofY"] = TofY;
-          jsonobject["TofZ"] = TofZ;
-          jsonobject["Unixtime"] = bUnixtime;
-          JsonObject jsonobject1 = jsonarray.createNestedObject();
-          jsonobject1["NodeID"] = node_asal;
-          jsonobject1["Suhu"] = suhu;
-          jsonobject1["Kelembapan"] = kelembapan;
-          jsonobject1["Unixtime"] = now.unixtime();
-          JsonObject jsonobject2 = jsonarray.createNestedObject();
-          jsonobject2["NodeID"] = 5;
-          jsonobject2["usX"] = NULL;
-          jsonobject2["usY"] = NULL;
-          jsonobject2["usZ"] = NULL;
-          jsonobject2["Unixtime"] = NULL;
-          datakirim = "";
-          serializeJson(doc, datakirim);
-          char kirim_loop[datakirim.length() + 1];
-          datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-          if(NODE_2_RSSI >= NODE_3_RSSI){
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = aNodeID_4;
-              jsonobject["TofX"] = TofX;
-              jsonobject["TofY"] = TofY;
-              jsonobject["TofZ"] = TofZ;
-              jsonobject["Unixtime"] = bUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = node_asal;
-              jsonobject1["Suhu"] = suhu;
-              jsonobject1["Kelembapan"] = kelembapan;
-              jsonobject1["Unixtime"] = now.unixtime();
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = 5;
-              jsonobject2["usX"] = NULL;
-              jsonobject2["usY"] = NULL;
-              jsonobject2["usZ"] = NULL;
-              jsonobject2["Unixtime"] = NULL;
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 2;
-              jsonobject3["Berat"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-                JsonArray jsonarray = doc.to<JsonArray>();
-                JsonObject jsonobject = jsonarray.createNestedObject();
-                jsonobject["NodeID"] = aNodeID_4;
-                jsonobject["TofX"] = TofX;
-                jsonobject["TofY"] = TofY;
-                jsonobject["TofZ"] = TofZ;
-                jsonobject["Unixtime"] = bUnixtime;
-                JsonObject jsonobject1 = jsonarray.createNestedObject();
-                jsonobject1["NodeID"] = node_asal;
-                jsonobject1["Suhu"] = suhu;
-                jsonobject1["Kelembapan"] = kelembapan;
-                jsonobject1["Unixtime"] = now.unixtime();
-                JsonObject jsonobject2 = jsonarray.createNestedObject();
-                jsonobject2["NodeID"] = 5;
-                jsonobject2["usX"] = NULL;
-                jsonobject2["usY"] = NULL;
-                jsonobject2["usZ"] = NULL;
-                jsonobject2["Unixtime"] = NULL;
-                JsonObject jsonobject3 = jsonarray.createNestedObject();
-                jsonobject3["NodeID"] = 2;
-                jsonobject3["Berat"] = NULL;
-                jsonobject3["Unixtime"] = NULL;
-                JsonObject jsonobject4 = jsonarray.createNestedObject();
-                jsonobject4["NodeID"] = 3;
-                jsonobject4["Pitch"] = NULL;
-                jsonobject4["Roll"] = NULL;
-                jsonobject4["Frekuensi"] = NULL;
-                jsonobject4["Unixtime"] = NULL;
-                datakirim = "";
-                serializeJson(doc, datakirim);
-                char kirim_loop[datakirim.length() + 1];
-                datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                  if (!mesh.checkConnection()) {
-                    do {
-                      Serial.println(F("Reconnecting to mesh network..."));
-                    } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                  } else {
-                    Serial.println(F("Send fail, Test OK"));
-                  }
-                }
+      } else if (NODE_5_RSSI >= NODE_2_RSSI && NODE_5_RSSI >= NODE_3_RSSI) {
+        paket_pesan pesan = { 41, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_5);
+        bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+        if (!NODE_5) {
+          paket_pesan pesan = { 415, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+          if (NODE_2_RSSI >= NODE_3_RSSI) {
+            RF24NetworkHeader header(/*to node*/ NODE_2);
+            bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+            if (!NODE_2) {
+              paket_pesan pesan = { 4152, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+              RF24NetworkHeader header(/*to node*/ NODE_3);
+              bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+              Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+              if (!NODE_3) {
+                paket_pesan pesan = { 41523, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_Master);
+                bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
               }
             }
-          }else if(NODE_3_RSSI >= NODE_2_RSSI){
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = aNodeID_4;
-              jsonobject["TofX"] = TofX;
-              jsonobject["TofY"] = TofY;
-              jsonobject["TofZ"] = TofZ;
-              jsonobject["Unixtime"] = bUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = node_asal;
-              jsonobject1["Suhu"] = suhu;
-              jsonobject1["Kelembapan"] = kelembapan;
-              jsonobject1["Unixtime"] = now.unixtime();
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = 5;
-              jsonobject2["usX"] = NULL;
-              jsonobject2["usY"] = NULL;
-              jsonobject2["usZ"] = NULL;
-              jsonobject2["Unixtime"] = NULL;
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 3;
-              jsonobject3["Pitch"] = NULL;
-              jsonobject3["Roll"] = NULL;
-              jsonobject3["Frekuensi"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-                JsonArray jsonarray = doc.to<JsonArray>();
-                JsonObject jsonobject = jsonarray.createNestedObject();
-                jsonobject["NodeID"] = aNodeID_4;
-                jsonobject["TofX"] = TofX;
-                jsonobject["TofY"] = TofY;
-                jsonobject["TofZ"] = TofZ;
-                jsonobject["Unixtime"] = bUnixtime;
-                JsonObject jsonobject1 = jsonarray.createNestedObject();
-                jsonobject1["NodeID"] = node_asal;
-                jsonobject1["Suhu"] = suhu;
-                jsonobject1["Kelembapan"] = kelembapan;
-                jsonobject1["Unixtime"] = now.unixtime();
-                JsonObject jsonobject2 = jsonarray.createNestedObject();
-                jsonobject2["NodeID"] = 5;
-                jsonobject2["usX"] = NULL;
-                jsonobject2["usY"] = NULL;
-                jsonobject2["usZ"] = NULL;
-                jsonobject2["Unixtime"] = NULL;
-                JsonObject jsonobject3 = jsonarray.createNestedObject();
-                jsonobject3["NodeID"] = 3;
-                jsonobject3["Pitch"] = NULL;
-                jsonobject3["Roll"] = NULL;
-                jsonobject3["Frekuensi"] = NULL;
-                jsonobject3["Unixtime"] = NULL;
-                JsonObject jsonobject4 = jsonarray.createNestedObject();
-                jsonobject4["NodeID"] = 2;
-                jsonobject4["Berat"] = NULL;
-                jsonobject4["Unixtime"] = NULL;
-                datakirim = "";
-                serializeJson(doc, datakirim);
-                char kirim_loop[datakirim.length() + 1];
-                datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                  if (!mesh.checkConnection()) {
-                    do {
-                      Serial.println(F("Reconnecting to mesh network..."));
-                    } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                  } else {
-                    Serial.println(F("Send fail, Test OK"));
-                  }
-                }
+          } else if (NODE_3_RSSI >= NODE_2_RSSI) {
+            paket_pesan pesan = { 415, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_3);
+            bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+            if (!NODE_3) {
+              paket_pesan pesan = { 4153, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+              RF24NetworkHeader header(/*to node*/ NODE_2);
+              bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+              Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+              if (!NODE_2) {
+                paket_pesan pesan = { 41532, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_Master);
+                bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
               }
             }
           }
@@ -4127,202 +1272,47 @@ void loop() {
         digitalWrite(LED_BUILTIN, LOW);
       }
     }
-    if (count == 1 && jumlahnode[0] == 5) {
+    if (pesan.ID == 5) {
       Serial.print("Received packet from NODE 5");
-      JsonObject NodeID_5 = doc[0];
-      int aNodeID_5 = NodeID_5["NodeID"];
-      int usX = NodeID_5["usX"];
-      int usY = NodeID_5["usY"];
-      int usZ = NodeID_5["usZ"];
-      uint32_t bUnixtime = NodeID_5["Unixtime"];
-      JsonArray jsonarray = doc.to<JsonArray>();
-      JsonObject jsonobject = jsonarray.createNestedObject();
-      jsonobject["NodeID"] = aNodeID_5;
-      jsonobject["usX"] = usX;
-      jsonobject["usY"] = usY;
-      jsonobject["usZ"] = usZ;
-      jsonobject["Unixtime"] = bUnixtime;
-      JsonObject jsonobject1 = jsonarray.createNestedObject();
-      jsonobject1["NodeID"] = node_asal;
-      jsonobject1["Suhu"] = suhu;
-      jsonobject1["Kelembapan"] = kelembapan;
-      jsonobject1["Unixtime"] = now.unixtime();
-      datakirim = "";
-      serializeJson(doc, datakirim);
-      char kirim_loop[datakirim.length() + 1];
-      datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
       BLEScanResults foundDevices = pBLEScan->start(scanTime, false);
       if (NODE_2_RSSI >= NODE_3_RSSI && NODE_2_RSSI >= NODE_4_RSSI) {
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-          JsonArray jsonarray = doc.to<JsonArray>();
-          JsonObject jsonobject = jsonarray.createNestedObject();
-          jsonobject["NodeID"] = aNodeID_5;
-          jsonobject["usX"] = usX;
-          jsonobject["usY"] = usY;
-          jsonobject["usZ"] = usZ;
-          jsonobject["Unixtime"] = bUnixtime;
-          JsonObject jsonobject1 = jsonarray.createNestedObject();
-          jsonobject1["NodeID"] = node_asal;
-          jsonobject1["Suhu"] = suhu;
-          jsonobject1["Kelembapan"] = kelembapan;
-          jsonobject1["Unixtime"] = now.unixtime();
-          JsonObject jsonobject2 = jsonarray.createNestedObject();
-          jsonobject2["NodeID"] = 2;
-          jsonobject2["Berat"] = NULL;
-          jsonobject2["Unixtime"] = NULL;
-          datakirim = "";
-          serializeJson(doc, datakirim);
-          char kirim_loop[datakirim.length() + 1];
-          datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-          if(NODE_3_RSSI >= NODE_4_RSSI){
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = aNodeID_5;
-              jsonobject["usX"] = usX;
-              jsonobject["usY"] = usY;
-              jsonobject["usZ"] = usZ;
-              jsonobject["Unixtime"] = bUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = node_asal;
-              jsonobject1["Suhu"] = suhu;
-              jsonobject1["Kelembapan"] = kelembapan;
-              jsonobject1["Unixtime"] = now.unixtime();
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = 2;
-              jsonobject2["Berat"] = NULL;
-              jsonobject2["Unixtime"] = NULL;
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 3;
-              jsonobject3["Pitch"] = NULL;
-              jsonobject3["Roll"] = NULL;
-              jsonobject3["Frekuensi"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-                JsonArray jsonarray = doc.to<JsonArray>();
-                JsonObject jsonobject = jsonarray.createNestedObject();
-                jsonobject["NodeID"] = aNodeID_5;
-                jsonobject["usX"] = usX;
-                jsonobject["usY"] = usY;
-                jsonobject["usZ"] = usZ;
-                jsonobject["Unixtime"] = bUnixtime;
-                JsonObject jsonobject1 = jsonarray.createNestedObject();
-                jsonobject1["NodeID"] = node_asal;
-                jsonobject1["Suhu"] = suhu;
-                jsonobject1["Kelembapan"] = kelembapan;
-                jsonobject1["Unixtime"] = now.unixtime();
-                JsonObject jsonobject2 = jsonarray.createNestedObject();
-                jsonobject2["NodeID"] = 2;
-                jsonobject2["Berat"] = NULL;
-                jsonobject2["Unixtime"] = NULL;
-                JsonObject jsonobject3 = jsonarray.createNestedObject();
-                jsonobject3["NodeID"] = 3;
-                jsonobject3["Pitch"] = NULL;
-                jsonobject3["Roll"] = NULL;
-                jsonobject3["Frekuensi"] = NULL;
-                jsonobject3["Unixtime"] = NULL;
-                JsonObject jsonobject4 = jsonarray.createNestedObject();
-                jsonobject4["NodeID"] = 4;
-                jsonobject4["TofX"] = NULL;
-                jsonobject4["TofY"] = NULL;
-                jsonobject4["TofZ"] = NULL;
-                jsonobject4["Unixtime"] = NULL;
-                datakirim = "";
-                serializeJson(doc, datakirim);
-                char kirim_loop[datakirim.length() + 1];
-                datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                  if (!mesh.checkConnection()) {
-                    do {
-                      Serial.println(F("Reconnecting to mesh network..."));
-                    } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                  } else {
-                    Serial.println(F("Send fail, Test OK"));
-                  }
-                }
+        paket_pesan pesan = { 51, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_2);
+        bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+        if (!NODE_2) {
+          if (NODE_3_RSSI >= NODE_4_RSSI) {
+            paket_pesan pesan = { 512, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_3);
+            bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+            if (!NODE_3) {
+              paket_pesan pesan = { 5123, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+              RF24NetworkHeader header(/*to node*/ NODE_4);
+              bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+              Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+              if (!NODE_4) {
+                paket_pesan pesan = { 51234, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_Master);
+                bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
               }
             }
-          }else if(NODE_4_RSSI >= NODE_3_RSSI){
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = aNodeID_5;
-              jsonobject["usX"] = usX;
-              jsonobject["usY"] = usY;
-              jsonobject["usZ"] = usZ;
-              jsonobject["Unixtime"] = bUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = node_asal;
-              jsonobject1["Suhu"] = suhu;
-              jsonobject1["Kelembapan"] = kelembapan;
-              jsonobject1["Unixtime"] = now.unixtime();
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = 2;
-              jsonobject2["Berat"] = NULL;
-              jsonobject2["Unixtime"] = NULL;
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 4;
-              jsonobject3["TofX"] = NULL;
-              jsonobject3["TofY"] = NULL;
-              jsonobject3["TofZ"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-                JsonArray jsonarray = doc.to<JsonArray>();
-                JsonObject jsonobject = jsonarray.createNestedObject();
-                jsonobject["NodeID"] = aNodeID_5;
-                jsonobject["usX"] = usX;
-                jsonobject["usY"] = usY;
-                jsonobject["usZ"] = usZ;
-                jsonobject["Unixtime"] = bUnixtime;
-                JsonObject jsonobject1 = jsonarray.createNestedObject();
-                jsonobject1["NodeID"] = node_asal;
-                jsonobject1["Suhu"] = suhu;
-                jsonobject1["Kelembapan"] = kelembapan;
-                jsonobject1["Unixtime"] = now.unixtime();
-                JsonObject jsonobject2 = jsonarray.createNestedObject();
-                jsonobject2["NodeID"] = 2;
-                jsonobject2["Berat"] = NULL;
-                jsonobject2["Unixtime"] = NULL;
-                JsonObject jsonobject3 = jsonarray.createNestedObject();
-                jsonobject3["NodeID"] = 4;
-                jsonobject3["TofX"] = NULL;
-                jsonobject3["TofY"] = NULL;
-                jsonobject3["TofZ"] = NULL;
-                jsonobject3["Unixtime"] = NULL;
-                JsonObject jsonobject4 = jsonarray.createNestedObject();
-                jsonobject4["NodeID"] = 3;
-                jsonobject4["Pitch"] = NULL;
-                jsonobject4["Roll"] = NULL;
-                jsonobject4["Frekuensi"] = NULL;
-                jsonobject4["Unixtime"] = NULL;
-                datakirim = "";
-                serializeJson(doc, datakirim);
-                char kirim_loop[datakirim.length() + 1];
-                datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                  if (!mesh.checkConnection()) {
-                    do {
-                      Serial.println(F("Reconnecting to mesh network..."));
-                    } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                  } else {
-                    Serial.println(F("Send fail, Test OK"));
-                  }
-                }
+          } else if (NODE_4_RSSI >= NODE_3_RSSI) {
+            paket_pesan pesan = { 512, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_4);
+            bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+            if (!NODE_4) {
+              paket_pesan pesan = { 5124, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+              RF24NetworkHeader header(/*to node*/ NODE_3);
+              bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+              Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+              if (!NODE_3) {
+                paket_pesan pesan = { 51243, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_Master);
+                bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
               }
             }
           }
@@ -4330,181 +1320,44 @@ void loop() {
           delay(100);
         }
         digitalWrite(LED_BUILTIN, LOW);
-      }else if (NODE_3_RSSI >= NODE_2_RSSI && NODE_3_RSSI >= NODE_4_RSSI) {
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-          JsonArray jsonarray = doc.to<JsonArray>();
-          JsonObject jsonobject = jsonarray.createNestedObject();
-          jsonobject["NodeID"] = aNodeID_5;
-          jsonobject["usX"] = usX;
-          jsonobject["usY"] = usY;
-          jsonobject["usZ"] = usZ;
-          jsonobject["Unixtime"] = bUnixtime;
-          JsonObject jsonobject1 = jsonarray.createNestedObject();
-          jsonobject1["NodeID"] = node_asal;
-          jsonobject1["Suhu"] = suhu;
-          jsonobject1["Kelembapan"] = kelembapan;
-          jsonobject1["Unixtime"] = now.unixtime();
-          JsonObject jsonobject2 = jsonarray.createNestedObject();
-          jsonobject2["NodeID"] = 3;
-          jsonobject2["Pitch"] = NULL;
-          jsonobject2["Roll"] = NULL;
-          jsonobject2["Frekuensi"] = NULL;
-          jsonobject2["Unixtime"] = NULL;
-          datakirim = "";
-          serializeJson(doc, datakirim);
-          char kirim_loop[datakirim.length() + 1];
-          datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-          if(NODE_2_RSSI >= NODE_4_RSSI){
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = aNodeID_5;
-              jsonobject["usX"] = usX;
-              jsonobject["usY"] = usY;
-              jsonobject["usZ"] = usZ;
-              jsonobject["Unixtime"] = bUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = node_asal;
-              jsonobject1["Suhu"] = suhu;
-              jsonobject1["Kelembapan"] = kelembapan;
-              jsonobject1["Unixtime"] = now.unixtime();
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = 3;
-              jsonobject2["Pitch"] = NULL;
-              jsonobject2["Roll"] = NULL;
-              jsonobject2["Frekuensi"] = NULL;
-              jsonobject2["Unixtime"] = NULL;
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 2;
-              jsonobject3["Berat"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-                JsonArray jsonarray = doc.to<JsonArray>();
-                JsonObject jsonobject = jsonarray.createNestedObject();
-                jsonobject["NodeID"] = aNodeID_5;
-                jsonobject["usX"] = usX;
-                jsonobject["usY"] = usY;
-                jsonobject["usZ"] = usZ;
-                jsonobject["Unixtime"] = bUnixtime;
-                JsonObject jsonobject1 = jsonarray.createNestedObject();
-                jsonobject1["NodeID"] = node_asal;
-                jsonobject1["Suhu"] = suhu;
-                jsonobject1["Kelembapan"] = kelembapan;
-                jsonobject1["Unixtime"] = now.unixtime();
-                JsonObject jsonobject2 = jsonarray.createNestedObject();
-                jsonobject2["NodeID"] = 3;
-                jsonobject2["Pitch"] = NULL;
-                jsonobject2["Roll"] = NULL;
-                jsonobject2["Frekuensi"] = NULL;
-                jsonobject2["Unixtime"] = NULL;
-                JsonObject jsonobject3 = jsonarray.createNestedObject();
-                jsonobject3["NodeID"] = 2;
-                jsonobject3["Berat"] = NULL;
-                jsonobject3["Unixtime"] = NULL;
-                JsonObject jsonobject4 = jsonarray.createNestedObject();
-                jsonobject4["NodeID"] = 4;
-                jsonobject4["TofX"] = NULL;
-                jsonobject4["TofY"] = NULL;
-                jsonobject4["TofZ"] = NULL;
-                jsonobject4["Unixtime"] = NULL;
-                datakirim = "";
-                serializeJson(doc, datakirim);
-                char kirim_loop[datakirim.length() + 1];
-                datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                  if (!mesh.checkConnection()) {
-                    do {
-                      Serial.println(F("Reconnecting to mesh network..."));
-                    } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                  } else {
-                    Serial.println(F("Send fail, Test OK"));
-                  }
-                }
+      } else if (NODE_3_RSSI >= NODE_2_RSSI && NODE_3_RSSI >= NODE_4_RSSI) {
+        paket_pesan pesan = { 51, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_3);
+        bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+        if (!NODE_3) {
+          if (NODE_2_RSSI >= NODE_4_RSSI) {
+            paket_pesan pesan = { 513, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_2);
+            bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+            if (!NODE_2) {
+              paket_pesan pesan = { 5132, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+              RF24NetworkHeader header(/*to node*/ NODE_4);
+              bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+              Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+              if (!NODE_4) {
+                paket_pesan pesan = { 51324, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_Master);
+                bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
               }
             }
-          }else if(NODE_4_RSSI >= NODE_2_RSSI){
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = aNodeID_5;
-              jsonobject["usX"] = usX;
-              jsonobject["usY"] = usY;
-              jsonobject["usZ"] = usZ;
-              jsonobject["Unixtime"] = bUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = node_asal;
-              jsonobject1["Suhu"] = suhu;
-              jsonobject1["Kelembapan"] = kelembapan;
-              jsonobject1["Unixtime"] = now.unixtime();
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = 3;
-              jsonobject2["Pitch"] = NULL;
-              jsonobject2["Roll"] = NULL;
-              jsonobject2["Frekuensi"] = NULL;
-              jsonobject2["Unixtime"] = NULL;
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 4;
-              jsonobject3["TofX"] = NULL;
-              jsonobject3["TofY"] = NULL;
-              jsonobject3["TofZ"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-                JsonArray jsonarray = doc.to<JsonArray>();
-                JsonObject jsonobject = jsonarray.createNestedObject();
-                jsonobject["NodeID"] = aNodeID_5;
-                jsonobject["usX"] = usX;
-                jsonobject["usY"] = usY;
-                jsonobject["usZ"] = usZ;
-                jsonobject["Unixtime"] = bUnixtime;
-                JsonObject jsonobject1 = jsonarray.createNestedObject();
-                jsonobject1["NodeID"] = node_asal;
-                jsonobject1["Suhu"] = suhu;
-                jsonobject1["Kelembapan"] = kelembapan;
-                jsonobject1["Unixtime"] = now.unixtime();
-                JsonObject jsonobject2 = jsonarray.createNestedObject();
-                jsonobject2["NodeID"] = 3;
-                jsonobject2["Pitch"] = NULL;
-                jsonobject2["Roll"] = NULL;
-                jsonobject2["Frekuensi"] = NULL;
-                jsonobject2["Unixtime"] = NULL;
-                JsonObject jsonobject3 = jsonarray.createNestedObject();
-                jsonobject3["NodeID"] = 4;
-                jsonobject3["TofX"] = NULL;
-                jsonobject3["TofY"] = NULL;
-                jsonobject3["TofZ"] = NULL;
-                jsonobject3["Unixtime"] = NULL;
-                JsonObject jsonobject4 = jsonarray.createNestedObject();
-                jsonobject4["NodeID"] = 2;
-                jsonobject4["Berat"] = NULL;
-                jsonobject4["Unixtime"] = NULL;
-                datakirim = "";
-                serializeJson(doc, datakirim);
-                char kirim_loop[datakirim.length() + 1];
-                datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                  if (!mesh.checkConnection()) {
-                    do {
-                      Serial.println(F("Reconnecting to mesh network..."));
-                    } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                  } else {
-                    Serial.println(F("Send fail, Test OK"));
-                  }
-                }
+          } else if (NODE_4_RSSI >= NODE_2_RSSI) {
+            paket_pesan pesan = { 513, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_4);
+            bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+            if (!NODE_4) {
+              paket_pesan pesan = { 5134, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+              RF24NetworkHeader header(/*to node*/ NODE_2);
+              bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+              Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+              if (!NODE_2) {
+                paket_pesan pesan = { 51342, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_Master);
+                bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
               }
             }
           }
@@ -4512,181 +1365,44 @@ void loop() {
           delay(100);
         }
         digitalWrite(LED_BUILTIN, LOW);
-      }else if (NODE_4_RSSI >= NODE_2_RSSI && NODE_4_RSSI >= NODE_3_RSSI) {
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-          JsonArray jsonarray = doc.to<JsonArray>();
-          JsonObject jsonobject = jsonarray.createNestedObject();
-          jsonobject["NodeID"] = aNodeID_5;
-          jsonobject["usX"] = usX;
-          jsonobject["usY"] = usY;
-          jsonobject["usZ"] = usZ;
-          jsonobject["Unixtime"] = bUnixtime;
-          JsonObject jsonobject1 = jsonarray.createNestedObject();
-          jsonobject1["NodeID"] = node_asal;
-          jsonobject1["Suhu"] = suhu;
-          jsonobject1["Kelembapan"] = kelembapan;
-          jsonobject1["Unixtime"] = now.unixtime();
-          JsonObject jsonobject2 = jsonarray.createNestedObject();
-          jsonobject2["NodeID"] = 4;
-          jsonobject2["TofX"] = NULL;
-          jsonobject2["TofY"] = NULL;
-          jsonobject2["TofZ"] = NULL;
-          jsonobject2["Unixtime"] = NULL;
-          datakirim = "";
-          serializeJson(doc, datakirim);
-          char kirim_loop[datakirim.length() + 1];
-          datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-          if(NODE_2_RSSI >= NODE_3_RSSI){
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = aNodeID_5;
-              jsonobject["usX"] = usX;
-              jsonobject["usY"] = usY;
-              jsonobject["usZ"] = usZ;
-              jsonobject["Unixtime"] = bUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = node_asal;
-              jsonobject1["Suhu"] = suhu;
-              jsonobject1["Kelembapan"] = kelembapan;
-              jsonobject1["Unixtime"] = now.unixtime();
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = 4;
-              jsonobject2["TofX"] = NULL;
-              jsonobject2["TofY"] = NULL;
-              jsonobject2["TofZ"] = NULL;
-              jsonobject2["Unixtime"] = NULL;
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 2;
-              jsonobject3["Berat"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-                JsonArray jsonarray = doc.to<JsonArray>();
-                JsonObject jsonobject = jsonarray.createNestedObject();
-                jsonobject["NodeID"] = aNodeID_5;
-                jsonobject["usX"] = usX;
-                jsonobject["usY"] = usY;
-                jsonobject["usZ"] = usZ;
-                jsonobject["Unixtime"] = bUnixtime;
-                JsonObject jsonobject1 = jsonarray.createNestedObject();
-                jsonobject1["NodeID"] = node_asal;
-                jsonobject1["Suhu"] = suhu;
-                jsonobject1["Kelembapan"] = kelembapan;
-                jsonobject1["Unixtime"] = now.unixtime();
-                JsonObject jsonobject2 = jsonarray.createNestedObject();
-                jsonobject2["NodeID"] = 4;
-                jsonobject2["TofX"] = NULL;
-                jsonobject2["TofY"] = NULL;
-                jsonobject2["TofZ"] = NULL;
-                jsonobject2["Unixtime"] = NULL;
-                JsonObject jsonobject3 = jsonarray.createNestedObject();
-                jsonobject3["NodeID"] = 2;
-                jsonobject3["Berat"] = NULL;
-                jsonobject3["Unixtime"] = NULL;
-                JsonObject jsonobject4 = jsonarray.createNestedObject();
-                jsonobject4["NodeID"] = 3;
-                jsonobject4["Pitch"] = NULL;
-                jsonobject4["Roll"] = NULL;
-                jsonobject4["Frekuensi"] = NULL;
-                jsonobject4["Unixtime"] = NULL;
-                datakirim = "";
-                serializeJson(doc, datakirim);
-                char kirim_loop[datakirim.length() + 1];
-                datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                  if (!mesh.checkConnection()) {
-                    do {
-                      Serial.println(F("Reconnecting to mesh network..."));
-                    } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                  } else {
-                    Serial.println(F("Send fail, Test OK"));
-                  }
-                }
+      } else if (NODE_4_RSSI >= NODE_2_RSSI && NODE_4_RSSI >= NODE_3_RSSI) {
+        paket_pesan pesan = { 51, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_4);
+        bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+        if (!NODE_4) {
+          if (NODE_2_RSSI >= NODE_3_RSSI) {
+            paket_pesan pesan = { 514, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_2);
+            bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+            if (!NODE_2) {
+              paket_pesan pesan = { 5142, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+              RF24NetworkHeader header(/*to node*/ NODE_3);
+              bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+              Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+              if (!NODE_3) {
+                paket_pesan pesan = { 51423, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_Master);
+                bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
               }
             }
-          }else if(NODE_3_RSSI >= NODE_2_RSSI){
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = aNodeID_5;
-              jsonobject["usX"] = usX;
-              jsonobject["usY"] = usY;
-              jsonobject["usZ"] = usZ;
-              jsonobject["Unixtime"] = bUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = node_asal;
-              jsonobject1["Suhu"] = suhu;
-              jsonobject1["Kelembapan"] = kelembapan;
-              jsonobject1["Unixtime"] = now.unixtime();
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = 4;
-              jsonobject2["TofX"] = NULL;
-              jsonobject2["TofY"] = NULL;
-              jsonobject2["TofZ"] = NULL;
-              jsonobject2["Unixtime"] = NULL;
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 3;
-              jsonobject3["Pitch"] = NULL;
-              jsonobject3["Roll"] = NULL;
-              jsonobject3["Frekuensi"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-                JsonArray jsonarray = doc.to<JsonArray>();
-                JsonObject jsonobject = jsonarray.createNestedObject();
-                jsonobject["NodeID"] = aNodeID_5;
-                jsonobject["usX"] = usX;
-                jsonobject["usY"] = usY;
-                jsonobject["usZ"] = usZ;
-                jsonobject["Unixtime"] = bUnixtime;
-                JsonObject jsonobject1 = jsonarray.createNestedObject();
-                jsonobject1["NodeID"] = node_asal;
-                jsonobject1["Suhu"] = suhu;
-                jsonobject1["Kelembapan"] = kelembapan;
-                jsonobject1["Unixtime"] = now.unixtime();
-                JsonObject jsonobject2 = jsonarray.createNestedObject();
-                jsonobject2["NodeID"] = 4;
-                jsonobject2["TofX"] = NULL;
-                jsonobject2["TofY"] = NULL;
-                jsonobject2["TofZ"] = NULL;
-                jsonobject2["Unixtime"] = NULL;
-                JsonObject jsonobject3 = jsonarray.createNestedObject();
-                jsonobject3["NodeID"] = 3;
-                jsonobject3["Pitch"] = NULL;
-                jsonobject3["Roll"] = NULL;
-                jsonobject3["Frekuensi"] = NULL;
-                jsonobject3["Unixtime"] = NULL;
-                JsonObject jsonobject4 = jsonarray.createNestedObject();
-                jsonobject4["NodeID"] = 2;
-                jsonobject4["Berat"] = NULL;
-                jsonobject4["Unixtime"] = NULL;
-                datakirim = "";
-                serializeJson(doc, datakirim);
-                char kirim_loop[datakirim.length() + 1];
-                datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-                if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                  Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                  if (!mesh.checkConnection()) {
-                    do {
-                      Serial.println(F("Reconnecting to mesh network..."));
-                    } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                  } else {
-                    Serial.println(F("Send fail, Test OK"));
-                  }
-                }
+          } else if (NODE_3_RSSI >= NODE_2_RSSI) {
+            paket_pesan pesan = { 514, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_3);
+            bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+            if (!NODE_3) {
+              paket_pesan pesan = { 5143, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+              RF24NetworkHeader header(/*to node*/ NODE_2);
+              bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+              Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+              if (!NODE_2) {
+                paket_pesan pesan = { 51432, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+                RF24NetworkHeader header(/*to node*/ NODE_Master);
+                bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+                Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
               }
             }
           }
@@ -4696,4542 +1412,43 @@ void loop() {
         digitalWrite(LED_BUILTIN, LOW);
       }
     }
-//==================================================POSISI NODE KE - 3==================================================
-    if (count == 2) {
-      Serial.print("Received packet from NODE " + jumlahnode[1]);
-      if (jumlahnode[0] == 2 && jumlahnode[1] == 3) {
-        JsonObject NodeID_2 = doc[0];
-        int bNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t cUnixtime = NodeID_2["unixtime"];
-        JsonObject NodeID_3 = doc[1];
-        int bNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t dUnixtime = NodeID_3["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = bNodeID_2;
-        jsonobject["Berat"] = Berat;
-        jsonobject["Unixtime"] = cUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = bNodeID_3;
-        jsonobject1["Pitch"] = Pitch;
-        jsonobject1["Roll"] = Roll;
-        jsonobject1["Frekuensi"] = Frekuensi;
-        jsonobject1["Unixtime"] = dUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = node_asal;
-        jsonobject2["Suhu"] = suhu;
-        jsonobject2["Kelembapan"] = kelembapan;
-        jsonobject2["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(NODE_4_RSSI >= NODE_5_RSSI){
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-            JsonArray jsonarray = doc.to<JsonArray>();
-            JsonObject jsonobject = jsonarray.createNestedObject();
-            jsonobject["NodeID"] = bNodeID_2;
-            jsonobject["Berat"] = Berat;
-            jsonobject["Unixtime"] = cUnixtime;
-            JsonObject jsonobject1 = jsonarray.createNestedObject();
-            jsonobject1["NodeID"] = bNodeID_3;
-            jsonobject1["Pitch"] = Pitch;
-            jsonobject1["Roll"] = Roll;
-            jsonobject1["Frekuensi"] = Frekuensi;
-            jsonobject1["Unixtime"] = dUnixtime;
-            JsonObject jsonobject2 = jsonarray.createNestedObject();
-            jsonobject2["NodeID"] = node_asal;
-            jsonobject2["Suhu"] = suhu;
-            jsonobject2["Kelembapan"] = kelembapan;
-            jsonobject2["Unixtime"] = now.unixtime();
-            JsonObject jsonobject3 = jsonarray.createNestedObject();
-            jsonobject3["NodeID"] = 4;
-            jsonobject3["TofX"] = NULL;
-            jsonobject3["TofY"] = NULL;
-            jsonobject3["TofZ"] = NULL;
-            jsonobject3["Unixtime"] = NULL;
-            datakirim = "";
-            serializeJson(doc, datakirim);
-            char kirim_loop[datakirim.length() + 1];
-            datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = bNodeID_2;
-              jsonobject["Berat"] = Berat;
-              jsonobject["Unixtime"] = cUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = bNodeID_3;
-              jsonobject1["Pitch"] = Pitch;
-              jsonobject1["Roll"] = Roll;
-              jsonobject1["Frekuensi"] = Frekuensi;
-              jsonobject1["Unixtime"] = dUnixtime;
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = node_asal;
-              jsonobject2["Suhu"] = suhu;
-              jsonobject2["Kelembapan"] = kelembapan;
-              jsonobject2["Unixtime"] = now.unixtime();
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 4;
-              jsonobject3["TofX"] = NULL;
-              jsonobject3["TofY"] = NULL;
-              jsonobject3["TofZ"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              JsonObject jsonobject4 = jsonarray.createNestedObject();
-              jsonobject4["NodeID"] = 5;
-              jsonobject4["usX"] = NULL;
-              jsonobject4["usY"] = NULL;
-              jsonobject4["usZ"] = NULL;
-              jsonobject4["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                if (!mesh.checkConnection()) {
-                  do {
-                    Serial.println(F("Reconnecting to mesh network..."));
-                  } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                } else {
-                  Serial.println(F("Send fail, Test OK"));
-                }
-              }
-            }
-            digitalWrite(LED_BUILTIN, HIGH);
-            delay(100);
-          }
-          digitalWrite(LED_BUILTIN, LOW);
-        }else if(NODE_5_RSSI >= NODE_4_RSSI){
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-            JsonArray jsonarray = doc.to<JsonArray>();
-            JsonObject jsonobject = jsonarray.createNestedObject();
-            jsonobject["NodeID"] = bNodeID_2;
-            jsonobject["Berat"] = Berat;
-            jsonobject["Unixtime"] = cUnixtime;
-            JsonObject jsonobject1 = jsonarray.createNestedObject();
-            jsonobject1["NodeID"] = bNodeID_3;
-            jsonobject1["Pitch"] = Pitch;
-            jsonobject1["Roll"] = Roll;
-            jsonobject1["Frekuensi"] = Frekuensi;
-            jsonobject1["Unixtime"] = dUnixtime;
-            JsonObject jsonobject2 = jsonarray.createNestedObject();
-            jsonobject2["NodeID"] = node_asal;
-            jsonobject2["Suhu"] = suhu;
-            jsonobject2["Kelembapan"] = kelembapan;
-            jsonobject2["Unixtime"] = now.unixtime();
-            JsonObject jsonobject3 = jsonarray.createNestedObject();
-            jsonobject3["NodeID"] = 5;
-            jsonobject3["usX"] = NULL;
-            jsonobject3["usY"] = NULL;
-            jsonobject3["usZ"] = NULL;
-            jsonobject3["Unixtime"] = NULL;
-            datakirim = "";
-            serializeJson(doc, datakirim);
-            char kirim_loop[datakirim.length() + 1];
-            datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = bNodeID_2;
-              jsonobject["Berat"] = Berat;
-              jsonobject["Unixtime"] = cUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = bNodeID_3;
-              jsonobject1["Pitch"] = Pitch;
-              jsonobject1["Roll"] = Roll;
-              jsonobject1["Frekuensi"] = Frekuensi;
-              jsonobject1["Unixtime"] = dUnixtime;
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = node_asal;
-              jsonobject2["Suhu"] = suhu;
-              jsonobject2["Kelembapan"] = kelembapan;
-              jsonobject2["Unixtime"] = now.unixtime();
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 5;
-              jsonobject3["usX"] = NULL;
-              jsonobject3["usY"] = NULL;
-              jsonobject3["usZ"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              JsonObject jsonobject4 = jsonarray.createNestedObject();
-              jsonobject4["NodeID"] = 4;
-              jsonobject4["TofX"] = NULL;
-              jsonobject4["TofY"] = NULL;
-              jsonobject4["TofZ"] = NULL;
-              jsonobject4["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                if (!mesh.checkConnection()) {
-                  do {
-                    Serial.println(F("Reconnecting to mesh network..."));
-                  } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                } else {
-                  Serial.println(F("Send fail, Test OK"));
-                }
-              }
-            }
-            digitalWrite(LED_BUILTIN, HIGH);
-            delay(100);
-          }
-          digitalWrite(LED_BUILTIN, LOW);
-        }
-      }
-      if (jumlahnode[0] == 2 && jumlahnode[1] == 4) {
-        JsonObject NodeID_2 = doc[0];
-        int dNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t gUnixtime = NodeID_2["Unixtime"];
-        JsonObject NodeID_4 = doc[1];
-        int bNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t hUnixtime = NodeID_4["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = dNodeID_2;
-        jsonobject["Berat"] = Berat;
-        jsonobject["Unixtime"] = gUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = bNodeID_4;
-        jsonobject1["TofX"] = TofX;
-        jsonobject1["TofY"] = TofY;
-        jsonobject1["TofZ"] = TofZ;
-        jsonobject1["Unixtime"] = hUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = node_asal;
-        jsonobject2["Suhu"] = suhu;
-        jsonobject2["Kelembapan"] = kelembapan;
-        jsonobject2["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(NODE_3_RSSI >= NODE_5_RSSI){
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-            JsonArray jsonarray = doc.to<JsonArray>();
-            JsonObject jsonobject = jsonarray.createNestedObject();
-            jsonobject["NodeID"] = dNodeID_2;
-            jsonobject["Berat"] = Berat;
-            jsonobject["Unixtime"] = gUnixtime;
-            JsonObject jsonobject1 = jsonarray.createNestedObject();
-            jsonobject1["NodeID"] = bNodeID_4;
-            jsonobject1["TofX"] = TofX;
-            jsonobject1["TofY"] = TofY;
-            jsonobject1["TofZ"] = TofZ;
-            jsonobject1["Unixtime"] = hUnixtime;
-            JsonObject jsonobject2 = jsonarray.createNestedObject();
-            jsonobject2["NodeID"] = node_asal;
-            jsonobject2["Suhu"] = suhu;
-            jsonobject2["Kelembapan"] = kelembapan;
-            jsonobject2["Unixtime"] = now.unixtime();
-            JsonObject jsonobject3 = jsonarray.createNestedObject();
-            jsonobject3["NodeID"] = 3;
-            jsonobject3["Pitch"] = NULL;
-            jsonobject3["Roll"] = NULL;
-            jsonobject3["Frekuensi"] = NULL;
-            jsonobject3["Unixtime"] = NULL;
-            datakirim = "";
-            serializeJson(doc, datakirim);
-            char kirim_loop[datakirim.length() + 1];
-            datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = dNodeID_2;
-              jsonobject["Berat"] = Berat;
-              jsonobject["Unixtime"] = gUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = bNodeID_4;
-              jsonobject1["TofX"] = TofX;
-              jsonobject1["TofY"] = TofY;
-              jsonobject1["TofZ"] = TofZ;
-              jsonobject1["Unixtime"] = hUnixtime;
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = node_asal;
-              jsonobject2["Suhu"] = suhu;
-              jsonobject2["Kelembapan"] = kelembapan;
-              jsonobject2["Unixtime"] = now.unixtime();
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 3;
-              jsonobject3["Pitch"] = NULL;
-              jsonobject3["Roll"] = NULL;
-              jsonobject3["Frekuensi"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              JsonObject jsonobject4 = jsonarray.createNestedObject();
-              jsonobject4["NodeID"] = 5;
-              jsonobject4["usX"] = NULL;
-              jsonobject4["usY"] = NULL;
-              jsonobject4["usZ"] = NULL;
-              jsonobject4["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                if (!mesh.checkConnection()) {
-                  do {
-                    Serial.println(F("Reconnecting to mesh network..."));
-                  } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                } else {
-                  Serial.println(F("Send fail, Test OK"));
-                }
-              }
-            }
-            digitalWrite(LED_BUILTIN, HIGH);
-            delay(100);
-          }
-          digitalWrite(LED_BUILTIN, LOW);
-        }else if(NODE_5_RSSI >= NODE_3_RSSI){
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-            JsonArray jsonarray = doc.to<JsonArray>();
-            JsonObject jsonobject = jsonarray.createNestedObject();
-            jsonobject["NodeID"] = dNodeID_2;
-            jsonobject["Berat"] = Berat;
-            jsonobject["Unixtime"] = gUnixtime;
-            JsonObject jsonobject1 = jsonarray.createNestedObject();
-            jsonobject1["NodeID"] = bNodeID_4;
-            jsonobject1["TofX"] = TofX;
-            jsonobject1["TofY"] = TofY;
-            jsonobject1["TofZ"] = TofZ;
-            jsonobject1["Unixtime"] = hUnixtime;
-            JsonObject jsonobject2 = jsonarray.createNestedObject();
-            jsonobject2["NodeID"] = node_asal;
-            jsonobject2["Suhu"] = suhu;
-            jsonobject2["Kelembapan"] = kelembapan;
-            jsonobject2["Unixtime"] = now.unixtime();
-            JsonObject jsonobject3 = jsonarray.createNestedObject();
-            jsonobject3["NodeID"] = 5;
-            jsonobject3["usX"] = NULL;
-            jsonobject3["usY"] = NULL;
-            jsonobject3["usZ"] = NULL;
-            jsonobject3["Unixtime"] = NULL;
-            datakirim = "";
-            serializeJson(doc, datakirim);
-            char kirim_loop[datakirim.length() + 1];
-            datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = dNodeID_2;
-              jsonobject["Berat"] = Berat;
-              jsonobject["Unixtime"] = gUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = bNodeID_4;
-              jsonobject1["TofX"] = TofX;
-              jsonobject1["TofY"] = TofY;
-              jsonobject1["TofZ"] = TofZ;
-              jsonobject1["Unixtime"] = hUnixtime;
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = node_asal;
-              jsonobject2["Suhu"] = suhu;
-              jsonobject2["Kelembapan"] = kelembapan;
-              jsonobject2["Unixtime"] = now.unixtime();
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 5;
-              jsonobject3["usX"] = NULL;
-              jsonobject3["usY"] = NULL;
-              jsonobject3["usZ"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              JsonObject jsonobject4 = jsonarray.createNestedObject();
-              jsonobject4["NodeID"] = 3;
-              jsonobject4["Pitch"] = NULL;
-              jsonobject4["Roll"] = NULL;
-              jsonobject4["Frekuensi"] = NULL;
-              jsonobject4["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                if (!mesh.checkConnection()) {
-                  do {
-                    Serial.println(F("Reconnecting to mesh network..."));
-                  } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                } else {
-                  Serial.println(F("Send fail, Test OK"));
-                }
-              }
-            }
-            digitalWrite(LED_BUILTIN, HIGH);
-            delay(100);
-          }
-          digitalWrite(LED_BUILTIN, LOW);
-        }
-      }
-      if (jumlahnode[0] == 2 && jumlahnode[1] == 5) {
-        JsonObject NodeID_2 = doc[0];
-        int dNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t gUnixtime = NodeID_2["Unixtime"];
-        JsonObject NodeID_5 = doc[1];
-        int bNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t hUnixtime = NodeID_5["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = dNodeID_2;
-        jsonobject["Berat"] = Berat;
-        jsonobject["Unixtime"] = gUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = bNodeID_5;
-        jsonobject1["usX"] = usX;
-        jsonobject1["usY"] = usY;
-        jsonobject1["usZ"] = usZ;
-        jsonobject1["Unixtime"] = hUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = node_asal;
-        jsonobject2["Suhu"] = suhu;
-        jsonobject2["Kelembapan"] = kelembapan;
-        jsonobject2["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(NODE_3_RSSI >= NODE_4_RSSI){
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-            JsonArray jsonarray = doc.to<JsonArray>();
-            JsonObject jsonobject = jsonarray.createNestedObject();
-            jsonobject["NodeID"] = dNodeID_2;
-            jsonobject["Berat"] = Berat;
-            jsonobject["Unixtime"] = gUnixtime;
-            JsonObject jsonobject1 = jsonarray.createNestedObject();
-            jsonobject1["NodeID"] = bNodeID_5;
-            jsonobject1["usX"] = usX;
-            jsonobject1["usY"] = usY;
-            jsonobject1["usZ"] = usZ;
-            jsonobject1["Unixtime"] = hUnixtime;
-            JsonObject jsonobject2 = jsonarray.createNestedObject();
-            jsonobject2["NodeID"] = node_asal;
-            jsonobject2["Suhu"] = suhu;
-            jsonobject2["Kelembapan"] = kelembapan;
-            jsonobject2["Unixtime"] = now.unixtime();
-            JsonObject jsonobject3 = jsonarray.createNestedObject();
-            jsonobject3["NodeID"] = 3;
-            jsonobject3["Pitch"] = NULL;
-            jsonobject3["Roll"] = NULL;
-            jsonobject3["Frekuensi"] = NULL;
-            jsonobject3["Unixtime"] = NULL;
-            datakirim = "";
-            serializeJson(doc, datakirim);
-            char kirim_loop[datakirim.length() + 1];
-            datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = dNodeID_2;
-              jsonobject["Berat"] = Berat;
-              jsonobject["Unixtime"] = gUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = bNodeID_5;
-              jsonobject1["usX"] = usX;
-              jsonobject1["usY"] = usY;
-              jsonobject1["usZ"] = usZ;
-              jsonobject1["Unixtime"] = hUnixtime;
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = node_asal;
-              jsonobject2["Suhu"] = suhu;
-              jsonobject2["Kelembapan"] = kelembapan;
-              jsonobject2["Unixtime"] = now.unixtime();
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 3;
-              jsonobject3["Pitch"] = NULL;
-              jsonobject3["Roll"] = NULL;
-              jsonobject3["Frekuensi"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              JsonObject jsonobject4 = jsonarray.createNestedObject();
-              jsonobject4["NodeID"] = 4;
-              jsonobject4["TofX"] = NULL;
-              jsonobject4["TofY"] = NULL;
-              jsonobject4["TofZ"] = NULL;
-              jsonobject4["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                if (!mesh.checkConnection()) {
-                  do {
-                    Serial.println(F("Reconnecting to mesh network..."));
-                  } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                } else {
-                  Serial.println(F("Send fail, Test OK"));
-                }
-              }
-            }
-            digitalWrite(LED_BUILTIN, HIGH);
-            delay(100);
-          }
-          digitalWrite(LED_BUILTIN, LOW);
-        }else if(NODE_4_RSSI >= NODE_3_RSSI){
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-            JsonArray jsonarray = doc.to<JsonArray>();
-            JsonObject jsonobject = jsonarray.createNestedObject();
-            jsonobject["NodeID"] = dNodeID_2;
-            jsonobject["Berat"] = Berat;
-            jsonobject["Unixtime"] = gUnixtime;
-            JsonObject jsonobject1 = jsonarray.createNestedObject();
-            jsonobject1["NodeID"] = bNodeID_5;
-            jsonobject1["usX"] = usX;
-            jsonobject1["usY"] = usY;
-            jsonobject1["usZ"] = usZ;
-            jsonobject1["Unixtime"] = hUnixtime;
-            JsonObject jsonobject2 = jsonarray.createNestedObject();
-            jsonobject2["NodeID"] = node_asal;
-            jsonobject2["Suhu"] = suhu;
-            jsonobject2["Kelembapan"] = kelembapan;
-            jsonobject2["Unixtime"] = now.unixtime();
-            JsonObject jsonobject3 = jsonarray.createNestedObject();
-            jsonobject3["NodeID"] = 4;
-            jsonobject3["TofX"] = NULL;
-            jsonobject3["TofY"] = NULL;
-            jsonobject3["TofZ"] = NULL;
-            jsonobject3["Unixtime"] = NULL;
-            datakirim = "";
-            serializeJson(doc, datakirim);
-            char kirim_loop[datakirim.length() + 1];
-            datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = dNodeID_2;
-              jsonobject["Berat"] = Berat;
-              jsonobject["Unixtime"] = gUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = bNodeID_5;
-              jsonobject1["usX"] = usX;
-              jsonobject1["usY"] = usY;
-              jsonobject1["usZ"] = usZ;
-              jsonobject1["Unixtime"] = hUnixtime;
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = node_asal;
-              jsonobject2["Suhu"] = suhu;
-              jsonobject2["Kelembapan"] = kelembapan;
-              jsonobject2["Unixtime"] = now.unixtime();
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 4;
-              jsonobject3["TofX"] = NULL;
-              jsonobject3["TofY"] = NULL;
-              jsonobject3["TofZ"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              JsonObject jsonobject4 = jsonarray.createNestedObject();
-              jsonobject4["NodeID"] = 3;
-              jsonobject4["Pitch"] = NULL;
-              jsonobject4["Roll"] = NULL;
-              jsonobject4["Frekuensi"] = NULL;
-              jsonobject4["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                if (!mesh.checkConnection()) {
-                  do {
-                    Serial.println(F("Reconnecting to mesh network..."));
-                  } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                } else {
-                  Serial.println(F("Send fail, Test OK"));
-                }
-              }
-            }
-            digitalWrite(LED_BUILTIN, HIGH);
-            delay(100);
-          }
-          digitalWrite(LED_BUILTIN, LOW);
-        }
-      }
-      if (jumlahnode[0] == 3 && jumlahnode[1] == 2) {
-        JsonObject NodeID_3 = doc[0];
-        int cNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t eUnixtime = NodeID_3["Unixtime"];
-        JsonObject NodeID_2 = doc[1];
-        int cNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t fUnixtime = NodeID_2["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = cNodeID_3;
-        jsonobject["Pitch"] = Pitch;
-        jsonobject["Roll"] = Roll;
-        jsonobject["Frekuensi"] = Frekuensi;
-        jsonobject["Unixtime"] = eUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = cNodeID_2;
-        jsonobject1["Berat"] = Berat;
-        jsonobject1["Unixtime"] = fUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = node_asal;
-        jsonobject2["Suhu"] = suhu;
-        jsonobject2["Kelembapan"] = kelembapan;
-        jsonobject2["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(NODE_4_RSSI >= NODE_5_RSSI){
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-            JsonArray jsonarray = doc.to<JsonArray>();
-            JsonObject jsonobject = jsonarray.createNestedObject();
-            jsonobject["NodeID"] = cNodeID_3;
-            jsonobject["Pitch"] = Pitch;
-            jsonobject["Roll"] = Roll;
-            jsonobject["Frekuensi"] = Frekuensi;
-            jsonobject["Unixtime"] = eUnixtime;
-            JsonObject jsonobject1 = jsonarray.createNestedObject();
-            jsonobject1["NodeID"] = cNodeID_2;
-            jsonobject1["Berat"] = Berat;
-            jsonobject1["Unixtime"] = fUnixtime;
-            JsonObject jsonobject2 = jsonarray.createNestedObject();
-            jsonobject2["NodeID"] = node_asal;
-            jsonobject2["Suhu"] = suhu;
-            jsonobject2["Kelembapan"] = kelembapan;
-            jsonobject2["Unixtime"] = now.unixtime();
-            JsonObject jsonobject3 = jsonarray.createNestedObject();
-            jsonobject3["NodeID"] = 4;
-            jsonobject3["TofX"] = NULL;
-            jsonobject3["TofY"] = NULL;
-            jsonobject3["TofZ"] = NULL;
-            jsonobject3["Unixtime"] = NULL;
-            datakirim = "";
-            serializeJson(doc, datakirim);
-            char kirim_loop[datakirim.length() + 1];
-            datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = cNodeID_3;
-              jsonobject["Pitch"] = Pitch;
-              jsonobject["Roll"] = Roll;
-              jsonobject["Frekuensi"] = Frekuensi;
-              jsonobject["Unixtime"] = eUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = cNodeID_2;
-              jsonobject1["Berat"] = Berat;
-              jsonobject1["Unixtime"] = fUnixtime;
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = node_asal;
-              jsonobject2["Suhu"] = suhu;
-              jsonobject2["Kelembapan"] = kelembapan;
-              jsonobject2["Unixtime"] = now.unixtime();
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 4;
-              jsonobject3["TofX"] = NULL;
-              jsonobject3["TofY"] = NULL;
-              jsonobject3["TofZ"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              JsonObject jsonobject4 = jsonarray.createNestedObject();
-              jsonobject4["NodeID"] = 5;
-              jsonobject4["usX"] = NULL;
-              jsonobject4["usY"] = NULL;
-              jsonobject4["usZ"] = NULL;
-              jsonobject4["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                if (!mesh.checkConnection()) {
-                  do {
-                    Serial.println(F("Reconnecting to mesh network..."));
-                  } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                } else {
-                  Serial.println(F("Send fail, Test OK"));
-                }
-              }
-            }
-            digitalWrite(LED_BUILTIN, HIGH);
-            delay(100);
-          }
-          digitalWrite(LED_BUILTIN, LOW);
-        }else if(NODE_5_RSSI >= NODE_4_RSSI){
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-            JsonArray jsonarray = doc.to<JsonArray>();
-            JsonObject jsonobject = jsonarray.createNestedObject();
-            jsonobject["NodeID"] = cNodeID_3;
-            jsonobject["Pitch"] = Pitch;
-            jsonobject["Roll"] = Roll;
-            jsonobject["Frekuensi"] = Frekuensi;
-            jsonobject["Unixtime"] = eUnixtime;
-            JsonObject jsonobject1 = jsonarray.createNestedObject();
-            jsonobject1["NodeID"] = cNodeID_2;
-            jsonobject1["Berat"] = Berat;
-            jsonobject1["Unixtime"] = fUnixtime;
-            JsonObject jsonobject2 = jsonarray.createNestedObject();
-            jsonobject2["NodeID"] = node_asal;
-            jsonobject2["Suhu"] = suhu;
-            jsonobject2["Kelembapan"] = kelembapan;
-            jsonobject2["Unixtime"] = now.unixtime();
-            JsonObject jsonobject3 = jsonarray.createNestedObject();
-            jsonobject3["NodeID"] = 5;
-            jsonobject3["usX"] = NULL;
-            jsonobject3["usY"] = NULL;
-            jsonobject3["usZ"] = NULL;
-            jsonobject3["Unixtime"] = NULL;
-            datakirim = "";
-            serializeJson(doc, datakirim);
-            char kirim_loop[datakirim.length() + 1];
-            datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = cNodeID_3;
-              jsonobject["Pitch"] = Pitch;
-              jsonobject["Roll"] = Roll;
-              jsonobject["Frekuensi"] = Frekuensi;
-              jsonobject["Unixtime"] = eUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = cNodeID_2;
-              jsonobject1["Berat"] = Berat;
-              jsonobject1["Unixtime"] = fUnixtime;
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = node_asal;
-              jsonobject2["Suhu"] = suhu;
-              jsonobject2["Kelembapan"] = kelembapan;
-              jsonobject2["Unixtime"] = now.unixtime();
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 5;
-              jsonobject3["usX"] = NULL;
-              jsonobject3["usY"] = NULL;
-              jsonobject3["usZ"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              JsonObject jsonobject4 = jsonarray.createNestedObject();
-              jsonobject4["NodeID"] = 4;
-              jsonobject4["TofX"] = NULL;
-              jsonobject4["TofY"] = NULL;
-              jsonobject4["TofZ"] = NULL;
-              jsonobject4["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                if (!mesh.checkConnection()) {
-                  do {
-                    Serial.println(F("Reconnecting to mesh network..."));
-                  } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                } else {
-                  Serial.println(F("Send fail, Test OK"));
-                }
-              }
-            }
-            digitalWrite(LED_BUILTIN, HIGH);
-            delay(100);
-          }
-          digitalWrite(LED_BUILTIN, LOW);
-        }
-      }
-      if (jumlahnode[0] == 3 && jumlahnode[1] == 4) {
-        JsonObject NodeID_3 = doc[0];
-        int eNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t mUnixtime = NodeID_3["Unixtime"];
-        JsonObject NodeID_4 = doc[1];
-        int eNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t nUnixtime = NodeID_4["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = eNodeID_3;
-        jsonobject["Pitch"] = Pitch;
-        jsonobject["Roll"] = Roll;
-        jsonobject["Frekuensi"] = Frekuensi;
-        jsonobject["Unixtime"] = mUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = eNodeID_4;
-        jsonobject1["TofX"] = TofX;
-        jsonobject1["TofY"] = TofY;
-        jsonobject1["TofZ"] = TofZ;
-        jsonobject1["Unixtime"] = nUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = node_asal;
-        jsonobject2["Suhu"] = suhu;
-        jsonobject2["Kelembapan"] = kelembapan;
-        jsonobject2["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(NODE_2_RSSI >= NODE_5_RSSI){
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-            JsonArray jsonarray = doc.to<JsonArray>();
-            JsonObject jsonobject = jsonarray.createNestedObject();
-            jsonobject["NodeID"] = eNodeID_3;
-            jsonobject["Pitch"] = Pitch;
-            jsonobject["Roll"] = Roll;
-            jsonobject["Frekuensi"] = Frekuensi;
-            jsonobject["Unixtime"] = mUnixtime;
-            JsonObject jsonobject1 = jsonarray.createNestedObject();
-            jsonobject1["NodeID"] = eNodeID_4;
-            jsonobject1["TofX"] = TofX;
-            jsonobject1["TofY"] = TofY;
-            jsonobject1["TofZ"] = TofZ;
-            jsonobject1["Unixtime"] = nUnixtime;
-            JsonObject jsonobject2 = jsonarray.createNestedObject();
-            jsonobject2["NodeID"] = node_asal;
-            jsonobject2["Suhu"] = suhu;
-            jsonobject2["Kelembapan"] = kelembapan;
-            jsonobject2["Unixtime"] = now.unixtime();
-            JsonObject jsonobject3 = jsonarray.createNestedObject();
-            jsonobject3["NodeID"] = 2;
-            jsonobject3["Berat"] = NULL;
-            jsonobject3["Unixtime"] = NULL;
-            datakirim = "";
-            serializeJson(doc, datakirim);
-            char kirim_loop[datakirim.length() + 1];
-            datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = eNodeID_3;
-              jsonobject["Pitch"] = Pitch;
-              jsonobject["Roll"] = Roll;
-              jsonobject["Frekuensi"] = Frekuensi;
-              jsonobject["Unixtime"] = mUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = eNodeID_4;
-              jsonobject1["TofX"] = TofX;
-              jsonobject1["TofY"] = TofY;
-              jsonobject1["TofZ"] = TofZ;
-              jsonobject1["Unixtime"] = nUnixtime;
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = node_asal;
-              jsonobject2["Suhu"] = suhu;
-              jsonobject2["Kelembapan"] = kelembapan;
-              jsonobject2["Unixtime"] = now.unixtime();
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 2;
-              jsonobject3["Berat"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              JsonObject jsonobject4 = jsonarray.createNestedObject();
-              jsonobject4["NodeID"] = 5;
-              jsonobject4["usX"] = NULL;
-              jsonobject4["usY"] = NULL;
-              jsonobject4["usZ"] = NULL;
-              jsonobject4["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                if (!mesh.checkConnection()) {
-                  do {
-                    Serial.println(F("Reconnecting to mesh network..."));
-                  } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                } else {
-                  Serial.println(F("Send fail, Test OK"));
-                }
-              }
-            }
-            digitalWrite(LED_BUILTIN, HIGH);
-            delay(100);
-          }
-          digitalWrite(LED_BUILTIN, LOW);
-        }else if(NODE_5_RSSI >= NODE_2_RSSI){
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-            JsonArray jsonarray = doc.to<JsonArray>();
-            JsonObject jsonobject = jsonarray.createNestedObject();
-            jsonobject["NodeID"] = eNodeID_3;
-            jsonobject["Pitch"] = Pitch;
-            jsonobject["Roll"] = Roll;
-            jsonobject["Frekuensi"] = Frekuensi;
-            jsonobject["Unixtime"] = mUnixtime;
-            JsonObject jsonobject1 = jsonarray.createNestedObject();
-            jsonobject1["NodeID"] = eNodeID_4;
-            jsonobject1["TofX"] = TofX;
-            jsonobject1["TofY"] = TofY;
-            jsonobject1["TofZ"] = TofZ;
-            jsonobject1["Unixtime"] = nUnixtime;
-            JsonObject jsonobject2 = jsonarray.createNestedObject();
-            jsonobject2["NodeID"] = node_asal;
-            jsonobject2["Suhu"] = suhu;
-            jsonobject2["Kelembapan"] = kelembapan;
-            jsonobject2["Unixtime"] = now.unixtime();
-            JsonObject jsonobject3 = jsonarray.createNestedObject();
-            jsonobject3["NodeID"] = 5;
-            jsonobject3["usX"] = NULL;
-            jsonobject3["usY"] = NULL;
-            jsonobject3["usZ"] = NULL;
-            jsonobject3["Unixtime"] = NULL;
-            datakirim = "";
-            serializeJson(doc, datakirim);
-            char kirim_loop[datakirim.length() + 1];
-            datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = eNodeID_3;
-              jsonobject["Pitch"] = Pitch;
-              jsonobject["Roll"] = Roll;
-              jsonobject["Frekuensi"] = Frekuensi;
-              jsonobject["Unixtime"] = mUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = eNodeID_4;
-              jsonobject1["TofX"] = TofX;
-              jsonobject1["TofY"] = TofY;
-              jsonobject1["TofZ"] = TofZ;
-              jsonobject1["Unixtime"] = nUnixtime;
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = node_asal;
-              jsonobject2["Suhu"] = suhu;
-              jsonobject2["Kelembapan"] = kelembapan;
-              jsonobject2["Unixtime"] = now.unixtime();
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 5;
-              jsonobject3["usX"] = NULL;
-              jsonobject3["usY"] = NULL;
-              jsonobject3["usZ"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              JsonObject jsonobject4 = jsonarray.createNestedObject();
-              jsonobject4["NodeID"] = 2;
-              jsonobject4["Berat"] = NULL;
-              jsonobject4["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                if (!mesh.checkConnection()) {
-                  do {
-                    Serial.println(F("Reconnecting to mesh network..."));
-                  } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                } else {
-                  Serial.println(F("Send fail, Test OK"));
-                }
-              }
-            }
-            digitalWrite(LED_BUILTIN, HIGH);
-            delay(100);
-          }
-          digitalWrite(LED_BUILTIN, LOW);
-        }
-      }
-      if (jumlahnode[0] == 3 && jumlahnode[1] == 5) {
-        JsonObject NodeID_3 = doc[0];
-        int eNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t mUnixtime = NodeID_3["Unixtime"];
-        JsonObject NodeID_5 = doc[1];
-        int eNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t nUnixtime = NodeID_5["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = eNodeID_3;
-        jsonobject["Pitch"] = Pitch;
-        jsonobject["Roll"] = Roll;
-        jsonobject["Frekuensi"] = Frekuensi;
-        jsonobject["Unixtime"] = mUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = eNodeID_5;
-        jsonobject1["usX"] = usX;
-        jsonobject1["usY"] = usY;
-        jsonobject1["usZ"] = usZ;
-        jsonobject1["Unixtime"] = nUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = node_asal;
-        jsonobject2["Suhu"] = suhu;
-        jsonobject2["Kelembapan"] = kelembapan;
-        jsonobject2["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(NODE_2_RSSI >= NODE_4_RSSI){
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-            JsonArray jsonarray = doc.to<JsonArray>();
-            JsonObject jsonobject = jsonarray.createNestedObject();
-            jsonobject["NodeID"] = eNodeID_3;
-            jsonobject["Pitch"] = Pitch;
-            jsonobject["Roll"] = Roll;
-            jsonobject["Frekuensi"] = Frekuensi;
-            jsonobject["Unixtime"] = mUnixtime;
-            JsonObject jsonobject1 = jsonarray.createNestedObject();
-            jsonobject1["NodeID"] = eNodeID_5;
-            jsonobject1["usX"] = usX;
-            jsonobject1["usY"] = usY;
-            jsonobject1["usZ"] = usZ;
-            jsonobject1["Unixtime"] = nUnixtime;
-            JsonObject jsonobject2 = jsonarray.createNestedObject();
-            jsonobject2["NodeID"] = node_asal;
-            jsonobject2["Suhu"] = suhu;
-            jsonobject2["Kelembapan"] = kelembapan;
-            jsonobject2["Unixtime"] = now.unixtime();
-            JsonObject jsonobject3 = jsonarray.createNestedObject();
-            jsonobject3["NodeID"] = 2;
-            jsonobject3["Berat"] = NULL;
-            jsonobject3["Unixtime"] = NULL;
-            datakirim = "";
-            serializeJson(doc, datakirim);
-            char kirim_loop[datakirim.length() + 1];
-            datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = eNodeID_3;
-              jsonobject["Pitch"] = Pitch;
-              jsonobject["Roll"] = Roll;
-              jsonobject["Frekuensi"] = Frekuensi;
-              jsonobject["Unixtime"] = mUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = eNodeID_5;
-              jsonobject1["usX"] = usX;
-              jsonobject1["usY"] = usY;
-              jsonobject1["usZ"] = usZ;
-              jsonobject1["Unixtime"] = nUnixtime;
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = node_asal;
-              jsonobject2["Suhu"] = suhu;
-              jsonobject2["Kelembapan"] = kelembapan;
-              jsonobject2["Unixtime"] = now.unixtime();
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 2;
-              jsonobject3["Berat"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              JsonObject jsonobject4 = jsonarray.createNestedObject();
-              jsonobject4["NodeID"] = 4;
-              jsonobject4["Tofx"] = NULL;
-              jsonobject4["TofY"] = NULL;
-              jsonobject4["TofZ"] = NULL;
-              jsonobject4["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                if (!mesh.checkConnection()) {
-                  do {
-                    Serial.println(F("Reconnecting to mesh network..."));
-                  } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                } else {
-                  Serial.println(F("Send fail, Test OK"));
-                }
-              }
-            }
-            digitalWrite(LED_BUILTIN, HIGH);
-            delay(100);
-          }
-          digitalWrite(LED_BUILTIN, LOW);
-        }else if(NODE_4_RSSI >= NODE_2_RSSI){
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-            JsonArray jsonarray = doc.to<JsonArray>();
-            JsonObject jsonobject = jsonarray.createNestedObject();
-            jsonobject["NodeID"] = eNodeID_3;
-            jsonobject["Pitch"] = Pitch;
-            jsonobject["Roll"] = Roll;
-            jsonobject["Frekuensi"] = Frekuensi;
-            jsonobject["Unixtime"] = mUnixtime;
-            JsonObject jsonobject1 = jsonarray.createNestedObject();
-            jsonobject1["NodeID"] = eNodeID_5;
-            jsonobject1["usX"] = usX;
-            jsonobject1["usY"] = usY;
-            jsonobject1["usZ"] = usZ;
-            jsonobject1["Unixtime"] = nUnixtime;
-            JsonObject jsonobject2 = jsonarray.createNestedObject();
-            jsonobject2["NodeID"] = node_asal;
-            jsonobject2["Suhu"] = suhu;
-            jsonobject2["Kelembapan"] = kelembapan;
-            jsonobject2["Unixtime"] = now.unixtime();
-            JsonObject jsonobject3 = jsonarray.createNestedObject();
-            jsonobject3["NodeID"] = 4;
-            jsonobject3["TofX"] = NULL;
-            jsonobject3["TofY"] = NULL;
-            jsonobject3["TofZ"] = NULL;
-            jsonobject3["Unixtime"] = NULL;
-            datakirim = "";
-            serializeJson(doc, datakirim);
-            char kirim_loop[datakirim.length() + 1];
-            datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = eNodeID_3;
-              jsonobject["Pitch"] = Pitch;
-              jsonobject["Roll"] = Roll;
-              jsonobject["Frekuensi"] = Frekuensi;
-              jsonobject["Unixtime"] = mUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = eNodeID_5;
-              jsonobject1["usX"] = usX;
-              jsonobject1["usY"] = usY;
-              jsonobject1["usZ"] = usZ;
-              jsonobject1["Unixtime"] = nUnixtime;
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = node_asal;
-              jsonobject2["Suhu"] = suhu;
-              jsonobject2["Kelembapan"] = kelembapan;
-              jsonobject2["Unixtime"] = now.unixtime();
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 4;
-              jsonobject3["TofX"] = NULL;
-              jsonobject3["TofY"] = NULL;
-              jsonobject3["TofZ"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              JsonObject jsonobject4 = jsonarray.createNestedObject();
-              jsonobject4["NodeID"] = 2;
-              jsonobject4["Berat"] = NULL;
-              jsonobject4["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                if (!mesh.checkConnection()) {
-                  do {
-                    Serial.println(F("Reconnecting to mesh network..."));
-                  } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                } else {
-                  Serial.println(F("Send fail, Test OK"));
-                }
-              }
-            }
-            digitalWrite(LED_BUILTIN, HIGH);
-            delay(100);
-          }
-          digitalWrite(LED_BUILTIN, LOW);
-        }
-      }
-      if (jumlahnode[0] == 4 && jumlahnode[1] == 2) {
-        JsonObject NodeID_4 = doc[0];
-        int cNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t iUnixtime = NodeID_4["Unixtime"];
-        JsonObject NodeID_2 = doc[1];
-        int eNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t jUnixtime = NodeID_2["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = cNodeID_4;
-        jsonobject["TofX"] = TofX;
-        jsonobject["TofY"] = TofY;
-        jsonobject["TofZ"] = TofZ;
-        jsonobject["Unixtime"] = iUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = eNodeID_2;
-        jsonobject1["Berat"] = Berat;
-        jsonobject1["Unixtime"] = jUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = node_asal;
-        jsonobject2["Suhu"] = suhu;
-        jsonobject2["Kelembapan"] = kelembapan;
-        jsonobject2["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(NODE_3_RSSI >= NODE_5_RSSI){
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-            JsonArray jsonarray = doc.to<JsonArray>();
-            JsonObject jsonobject = jsonarray.createNestedObject();
-            jsonobject["NodeID"] = cNodeID_4;
-            jsonobject["TofX"] = TofX;
-            jsonobject["TofY"] = TofY;
-            jsonobject["TofZ"] = TofZ;
-            jsonobject["Unixtime"] = iUnixtime;
-            JsonObject jsonobject1 = jsonarray.createNestedObject();
-            jsonobject1["NodeID"] = eNodeID_2;
-            jsonobject1["Berat"] = Berat;
-            jsonobject1["Unixtime"] = jUnixtime;
-            JsonObject jsonobject2 = jsonarray.createNestedObject();
-            jsonobject2["NodeID"] = node_asal;
-            jsonobject2["Suhu"] = suhu;
-            jsonobject2["Kelembapan"] = kelembapan;
-            jsonobject2["Unixtime"] = now.unixtime();
-            JsonObject jsonobject3 = jsonarray.createNestedObject();
-            jsonobject3["NodeID"] = 3;
-            jsonobject3["Pitch"] = NULL;
-            jsonobject3["Roll"] = NULL;
-            jsonobject3["Frekuensi"] = NULL;
-            jsonobject3["Unixtime"] = NULL;
-            datakirim = "";
-            serializeJson(doc, datakirim);
-            char kirim_loop[datakirim.length() + 1];
-            datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = cNodeID_4;
-              jsonobject["TofX"] = TofX;
-              jsonobject["TofY"] = TofY;
-              jsonobject["TofZ"] = TofZ;
-              jsonobject["Unixtime"] = iUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = eNodeID_2;
-              jsonobject1["Berat"] = Berat;
-              jsonobject1["Unixtime"] = jUnixtime;
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = node_asal;
-              jsonobject2["Suhu"] = suhu;
-              jsonobject2["Kelembapan"] = kelembapan;
-              jsonobject2["Unixtime"] = now.unixtime();
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 3;
-              jsonobject3["Pitch"] = NULL;
-              jsonobject3["Roll"] = NULL;
-              jsonobject3["Frekuensi"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              JsonObject jsonobject4 = jsonarray.createNestedObject();
-              jsonobject4["NodeID"] = 5;
-              jsonobject4["usX"] = NULL;
-              jsonobject4["usY"] = NULL;
-              jsonobject4["usZ"] = NULL;
-              jsonobject4["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                if (!mesh.checkConnection()) {
-                  do {
-                    Serial.println(F("Reconnecting to mesh network..."));
-                  } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                } else {
-                  Serial.println(F("Send fail, Test OK"));
-                }
-              }
-            }
-            digitalWrite(LED_BUILTIN, HIGH);
-            delay(100);
-          }
-          digitalWrite(LED_BUILTIN, LOW);
-        }else if(NODE_5_RSSI >= NODE_3_RSSI){
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-            JsonArray jsonarray = doc.to<JsonArray>();
-            JsonObject jsonobject = jsonarray.createNestedObject();
-            jsonobject["NodeID"] = cNodeID_4;
-            jsonobject["TofX"] = TofX;
-            jsonobject["TofY"] = TofY;
-            jsonobject["TofZ"] = TofZ;
-            jsonobject["Unixtime"] = iUnixtime;
-            JsonObject jsonobject1 = jsonarray.createNestedObject();
-            jsonobject1["NodeID"] = eNodeID_2;
-            jsonobject1["Berat"] = Berat;
-            jsonobject1["Unixtime"] = jUnixtime;
-            JsonObject jsonobject2 = jsonarray.createNestedObject();
-            jsonobject2["NodeID"] = node_asal;
-            jsonobject2["Suhu"] = suhu;
-            jsonobject2["Kelembapan"] = kelembapan;
-            jsonobject2["Unixtime"] = now.unixtime();
-            JsonObject jsonobject3 = jsonarray.createNestedObject();
-            jsonobject3["NodeID"] = 5;
-            jsonobject3["usX"] = NULL;
-            jsonobject3["usY"] = NULL;
-            jsonobject3["usZ"] = NULL;
-            jsonobject3["Unixtime"] = NULL;
-            datakirim = "";
-            serializeJson(doc, datakirim);
-            char kirim_loop[datakirim.length() + 1];
-            datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = cNodeID_4;
-              jsonobject["TofX"] = TofX;
-              jsonobject["TofY"] = TofY;
-              jsonobject["TofZ"] = TofZ;
-              jsonobject["Unixtime"] = iUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = eNodeID_2;
-              jsonobject1["Berat"] = Berat;
-              jsonobject1["Unixtime"] = jUnixtime;
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = node_asal;
-              jsonobject2["Suhu"] = suhu;
-              jsonobject2["Kelembapan"] = kelembapan;
-              jsonobject2["Unixtime"] = now.unixtime();
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 5;
-              jsonobject3["usX"] = NULL;
-              jsonobject3["usY"] = NULL;
-              jsonobject3["usZ"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              JsonObject jsonobject4 = jsonarray.createNestedObject();
-              jsonobject4["NodeID"] = 3;
-              jsonobject4["Pitch"] = NULL;
-              jsonobject4["Roll"] = NULL;
-              jsonobject4["Frekuensi"] = NULL;
-              jsonobject4["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                if (!mesh.checkConnection()) {
-                  do {
-                    Serial.println(F("Reconnecting to mesh network..."));
-                  } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                } else {
-                  Serial.println(F("Send fail, Test OK"));
-                }
-              }
-            }
-            digitalWrite(LED_BUILTIN, HIGH);
-            delay(100);
-          }
-          digitalWrite(LED_BUILTIN, LOW);
-        }
-      }
-      if (jumlahnode[0] == 4 && jumlahnode[1] == 3) {
-        JsonObject NodeID_4 = doc[0];
-        int dNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t kUnixtime = NodeID_4["Unixtime"];
-        JsonObject NodeID_3 = doc[1];
-        int dNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t lUnixtime = NodeID_3["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = dNodeID_4;
-        jsonobject["TofX"] = TofX;
-        jsonobject["TofY"] = TofY;
-        jsonobject["TofZ"] = TofZ;
-        jsonobject["Unixtime"] = kUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = dNodeID_3;
-        jsonobject1["Pitch"] = Pitch;
-        jsonobject1["Roll"] = Roll;
-        jsonobject1["Frekuensi"] = Frekuensi;
-        jsonobject1["Unixtime"] = lUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = node_asal;
-        jsonobject2["Suhu"] = suhu;
-        jsonobject2["Kelembapan"] = kelembapan;
-        jsonobject2["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(NODE_2_RSSI >= NODE_5_RSSI){
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-            JsonArray jsonarray = doc.to<JsonArray>();
-            JsonObject jsonobject = jsonarray.createNestedObject();
-            jsonobject["NodeID"] = dNodeID_4;
-            jsonobject["TofX"] = TofX;
-            jsonobject["TofY"] = TofY;
-            jsonobject["TofZ"] = TofZ;
-            jsonobject["Unixtime"] = kUnixtime;
-            JsonObject jsonobject1 = jsonarray.createNestedObject();
-            jsonobject1["NodeID"] = dNodeID_3;
-            jsonobject1["Pitch"] = Pitch;
-            jsonobject1["Roll"] = Roll;
-            jsonobject1["Frekuensi"] = Frekuensi;
-            jsonobject1["Unixtime"] = lUnixtime;
-            JsonObject jsonobject2 = jsonarray.createNestedObject();
-            jsonobject2["NodeID"] = node_asal;
-            jsonobject2["Suhu"] = suhu;
-            jsonobject2["Kelembapan"] = kelembapan;
-            jsonobject2["Unixtime"] = now.unixtime();
-            JsonObject jsonobject3 = jsonarray.createNestedObject();
-            jsonobject3["NodeID"] = 2;
-            jsonobject3["Berat"] = NULL;
-            jsonobject3["Unixtime"] = NULL;
-            datakirim = "";
-            serializeJson(doc, datakirim);
-            char kirim_loop[datakirim.length() + 1];
-            datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = dNodeID_4;
-              jsonobject["TofX"] = TofX;
-              jsonobject["TofY"] = TofY;
-              jsonobject["TofZ"] = TofZ;
-              jsonobject["Unixtime"] = kUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = dNodeID_3;
-              jsonobject1["Pitch"] = Pitch;
-              jsonobject1["Roll"] = Roll;
-              jsonobject1["Frekuensi"] = Frekuensi;
-              jsonobject1["Unixtime"] = lUnixtime;
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = node_asal;
-              jsonobject2["Suhu"] = suhu;
-              jsonobject2["Kelembapan"] = kelembapan;
-              jsonobject2["Unixtime"] = now.unixtime();
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 2;
-              jsonobject3["Berat"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              JsonObject jsonobject4 = jsonarray.createNestedObject();
-              jsonobject4["NodeID"] = 5;
-              jsonobject4["usX"] = NULL;
-              jsonobject4["usY"] = NULL;
-              jsonobject4["usZ"] = NULL;
-              jsonobject4["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                if (!mesh.checkConnection()) {
-                  do {
-                    Serial.println(F("Reconnecting to mesh network..."));
-                  } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                } else {
-                  Serial.println(F("Send fail, Test OK"));
-                }
-              }
-            }
-            digitalWrite(LED_BUILTIN, HIGH);
-            delay(100);
-          }
-          digitalWrite(LED_BUILTIN, LOW);
-        }else if(NODE_5_RSSI >= NODE_2_RSSI){
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-            JsonArray jsonarray = doc.to<JsonArray>();
-            JsonObject jsonobject = jsonarray.createNestedObject();
-            jsonobject["NodeID"] = dNodeID_4;
-            jsonobject["TofX"] = TofX;
-            jsonobject["TofY"] = TofY;
-            jsonobject["TofZ"] = TofZ;
-            jsonobject["Unixtime"] = kUnixtime;
-            JsonObject jsonobject1 = jsonarray.createNestedObject();
-            jsonobject1["NodeID"] = dNodeID_3;
-            jsonobject1["Pitch"] = Pitch;
-            jsonobject1["Roll"] = Roll;
-            jsonobject1["Frekuensi"] = Frekuensi;
-            jsonobject1["Unixtime"] = lUnixtime;
-            JsonObject jsonobject2 = jsonarray.createNestedObject();
-            jsonobject2["NodeID"] = node_asal;
-            jsonobject2["Suhu"] = suhu;
-            jsonobject2["Kelembapan"] = kelembapan;
-            jsonobject2["Unixtime"] = now.unixtime();
-            JsonObject jsonobject3 = jsonarray.createNestedObject();
-            jsonobject3["NodeID"] = 5;
-            jsonobject3["usX"] = NULL;
-            jsonobject3["usY"] = NULL;
-            jsonobject3["usZ"] = NULL;
-            jsonobject3["Unixtime"] = NULL;
-            datakirim = "";
-            serializeJson(doc, datakirim);
-            char kirim_loop[datakirim.length() + 1];
-            datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = dNodeID_4;
-              jsonobject["TofX"] = TofX;
-              jsonobject["TofY"] = TofY;
-              jsonobject["TofZ"] = TofZ;
-              jsonobject["Unixtime"] = kUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = dNodeID_3;
-              jsonobject1["Pitch"] = Pitch;
-              jsonobject1["Roll"] = Roll;
-              jsonobject1["Frekuensi"] = Frekuensi;
-              jsonobject1["Unixtime"] = lUnixtime;
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = node_asal;
-              jsonobject2["Suhu"] = suhu;
-              jsonobject2["Kelembapan"] = kelembapan;
-              jsonobject2["Unixtime"] = now.unixtime();
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 5;
-              jsonobject3["usX"] = NULL;
-              jsonobject3["usY"] = NULL;
-              jsonobject3["usZ"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              JsonObject jsonobject4 = jsonarray.createNestedObject();
-              jsonobject4["NodeID"] = 2;
-              jsonobject4["Berat"] = NULL;
-              jsonobject4["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                if (!mesh.checkConnection()) {
-                  do {
-                    Serial.println(F("Reconnecting to mesh network..."));
-                  } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                } else {
-                  Serial.println(F("Send fail, Test OK"));
-                }
-              }
-            }
-            digitalWrite(LED_BUILTIN, HIGH);
-            delay(100);
-          }
-          digitalWrite(LED_BUILTIN, LOW);
-        }
-      }
-      if (jumlahnode[0] == 4 && jumlahnode[1] == 5) {
-        JsonObject NodeID_4 = doc[0];
-        int dNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t kUnixtime = NodeID_4["Unixtime"];
-        JsonObject NodeID_5 = doc[1];
-        int dNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t lUnixtime = NodeID_5["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = dNodeID_4;
-        jsonobject["TofX"] = TofX;
-        jsonobject["TofY"] = TofY;
-        jsonobject["TofZ"] = TofZ;
-        jsonobject["Unixtime"] = kUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = dNodeID_5;
-        jsonobject1["usX"] = usX;
-        jsonobject1["usY"] = usY;
-        jsonobject1["usZ"] = usZ;
-        jsonobject1["Unixtime"] = lUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = node_asal;
-        jsonobject2["Suhu"] = suhu;
-        jsonobject2["Kelembapan"] = kelembapan;
-        jsonobject2["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(NODE_2_RSSI >= NODE_3_RSSI){
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-            JsonArray jsonarray = doc.to<JsonArray>();
-            JsonObject jsonobject = jsonarray.createNestedObject();
-            jsonobject["NodeID"] = dNodeID_4;
-            jsonobject["TofX"] = TofX;
-            jsonobject["TofY"] = TofY;
-            jsonobject["TofZ"] = TofZ;
-            jsonobject["Unixtime"] = kUnixtime;
-            JsonObject jsonobject1 = jsonarray.createNestedObject();
-            jsonobject1["NodeID"] = dNodeID_5;
-            jsonobject1["usX"] = usX;
-            jsonobject1["usY"] = usY;
-            jsonobject1["usZ"] = usZ;
-            jsonobject1["Unixtime"] = lUnixtime;
-            JsonObject jsonobject2 = jsonarray.createNestedObject();
-            jsonobject2["NodeID"] = node_asal;
-            jsonobject2["Suhu"] = suhu;
-            jsonobject2["Kelembapan"] = kelembapan;
-            jsonobject2["Unixtime"] = now.unixtime();
-            JsonObject jsonobject3 = jsonarray.createNestedObject();
-            jsonobject3["NodeID"] = 2;
-            jsonobject3["Berat"] = NULL;
-            jsonobject3["Unixtime"] = NULL;
-            datakirim = "";
-            serializeJson(doc, datakirim);
-            char kirim_loop[datakirim.length() + 1];
-            datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = dNodeID_4;
-              jsonobject["TofX"] = TofX;
-              jsonobject["TofY"] = TofY;
-              jsonobject["TofZ"] = TofZ;
-              jsonobject["Unixtime"] = kUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = dNodeID_5;
-              jsonobject1["usX"] = usX;
-              jsonobject1["usY"] = usY;
-              jsonobject1["usZ"] = usZ;
-              jsonobject1["Unixtime"] = lUnixtime;
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = node_asal;
-              jsonobject2["Suhu"] = suhu;
-              jsonobject2["Kelembapan"] = kelembapan;
-              jsonobject2["Unixtime"] = now.unixtime();
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 2;
-              jsonobject3["Berat"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              JsonObject jsonobject4 = jsonarray.createNestedObject();
-              jsonobject4["NodeID"] = 3;
-              jsonobject4["Pitch"] = NULL;
-              jsonobject4["Roll"] = NULL;
-              jsonobject4["Frekuensi"] = NULL;
-              jsonobject4["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                if (!mesh.checkConnection()) {
-                  do {
-                    Serial.println(F("Reconnecting to mesh network..."));
-                  } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                } else {
-                  Serial.println(F("Send fail, Test OK"));
-                }
-              }
-            }
-            digitalWrite(LED_BUILTIN, HIGH);
-            delay(100);
-          }
-          digitalWrite(LED_BUILTIN, LOW);
-        }else if(NODE_3_RSSI >= NODE_2_RSSI){
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-            JsonArray jsonarray = doc.to<JsonArray>();
-            JsonObject jsonobject = jsonarray.createNestedObject();
-            jsonobject["NodeID"] = dNodeID_4;
-            jsonobject["TofX"] = TofX;
-            jsonobject["TofY"] = TofY;
-            jsonobject["TofZ"] = TofZ;
-            jsonobject["Unixtime"] = kUnixtime;
-            JsonObject jsonobject1 = jsonarray.createNestedObject();
-            jsonobject1["NodeID"] = dNodeID_5;
-            jsonobject1["usX"] = usX;
-            jsonobject1["usY"] = usY;
-            jsonobject1["usZ"] = usZ;
-            jsonobject1["Unixtime"] = lUnixtime;
-            JsonObject jsonobject2 = jsonarray.createNestedObject();
-            jsonobject2["NodeID"] = node_asal;
-            jsonobject2["Suhu"] = suhu;
-            jsonobject2["Kelembapan"] = kelembapan;
-            jsonobject2["Unixtime"] = now.unixtime();
-            JsonObject jsonobject3 = jsonarray.createNestedObject();
-            jsonobject3["NodeID"] = 3;
-            jsonobject3["Pitch"] = NULL;
-            jsonobject3["Roll"] = NULL;
-            jsonobject3["Frekuensi"] = NULL;
-            jsonobject3["Unixtime"] = NULL;
-            datakirim = "";
-            serializeJson(doc, datakirim);
-            char kirim_loop[datakirim.length() + 1];
-            datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = dNodeID_4;
-              jsonobject["TofX"] = TofX;
-              jsonobject["TofY"] = TofY;
-              jsonobject["TofZ"] = TofZ;
-              jsonobject["Unixtime"] = kUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = dNodeID_5;
-              jsonobject1["usX"] = usX;
-              jsonobject1["usY"] = usY;
-              jsonobject1["usZ"] = usZ;
-              jsonobject1["Unixtime"] = lUnixtime;
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = node_asal;
-              jsonobject2["Suhu"] = suhu;
-              jsonobject2["Kelembapan"] = kelembapan;
-              jsonobject2["Unixtime"] = now.unixtime();
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 3;
-              jsonobject3["Pitch"] = NULL;
-              jsonobject3["Roll"] = NULL;
-              jsonobject3["Frekuensi"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              JsonObject jsonobject4 = jsonarray.createNestedObject();
-              jsonobject4["NodeID"] = 2;
-              jsonobject4["Berat"] = NULL;
-              jsonobject4["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                if (!mesh.checkConnection()) {
-                  do {
-                    Serial.println(F("Reconnecting to mesh network..."));
-                  } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                } else {
-                  Serial.println(F("Send fail, Test OK"));
-                }
-              }
-            }
-            digitalWrite(LED_BUILTIN, HIGH);
-            delay(100);
-          }
-          digitalWrite(LED_BUILTIN, LOW);
-        }
-      }
-      if (jumlahnode[0] == 5 && jumlahnode[1] == 2) {
-        JsonObject NodeID_5 = doc[0];
-        int cNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t iUnixtime = NodeID_5["Unixtime"];
-        JsonObject NodeID_2 = doc[1];
-        int eNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t jUnixtime = NodeID_2["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = cNodeID_5;
-        jsonobject["usX"] = usX;
-        jsonobject["usY"] = usY;
-        jsonobject["usZ"] = usZ;
-        jsonobject["Unixtime"] = iUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = eNodeID_2;
-        jsonobject1["Berat"] = Berat;
-        jsonobject1["Unixtime"] = jUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = node_asal;
-        jsonobject2["Suhu"] = suhu;
-        jsonobject2["Kelembapan"] = kelembapan;
-        jsonobject2["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(NODE_3_RSSI >= NODE_4_RSSI){
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-            JsonArray jsonarray = doc.to<JsonArray>();
-            JsonObject jsonobject = jsonarray.createNestedObject();
-            jsonobject["NodeID"] = cNodeID_5;
-            jsonobject["usX"] = usX;
-            jsonobject["usY"] = usY;
-            jsonobject["usZ"] = usZ;
-            jsonobject["Unixtime"] = iUnixtime;
-            JsonObject jsonobject1 = jsonarray.createNestedObject();
-            jsonobject1["NodeID"] = eNodeID_2;
-            jsonobject1["Berat"] = Berat;
-            jsonobject1["Unixtime"] = jUnixtime;
-            JsonObject jsonobject2 = jsonarray.createNestedObject();
-            jsonobject2["NodeID"] = node_asal;
-            jsonobject2["Suhu"] = suhu;
-            jsonobject2["Kelembapan"] = kelembapan;
-            jsonobject2["Unixtime"] = now.unixtime();
-            JsonObject jsonobject3 = jsonarray.createNestedObject();
-            jsonobject3["NodeID"] = 3;
-            jsonobject3["Pitch"] = NULL;
-            jsonobject3["Roll"] = NULL;
-            jsonobject3["Frekuensi"] = NULL;
-            jsonobject3["Unixtime"] = NULL;
-            datakirim = "";
-            serializeJson(doc, datakirim);
-            char kirim_loop[datakirim.length() + 1];
-            datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = cNodeID_5;
-              jsonobject["usX"] = usX;
-              jsonobject["usY"] = usY;
-              jsonobject["usZ"] = usZ;
-              jsonobject["Unixtime"] = iUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = eNodeID_2;
-              jsonobject1["Berat"] = Berat;
-              jsonobject1["Unixtime"] = jUnixtime;
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = node_asal;
-              jsonobject2["Suhu"] = suhu;
-              jsonobject2["Kelembapan"] = kelembapan;
-              jsonobject2["Unixtime"] = now.unixtime();
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 3;
-              jsonobject3["Pitch"] = NULL;
-              jsonobject3["Roll"] = NULL;
-              jsonobject3["Frekuensi"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              JsonObject jsonobject4 = jsonarray.createNestedObject();
-              jsonobject4["NodeID"] = 4;
-              jsonobject4["TofX"] = NULL;
-              jsonobject4["TofY"] = NULL;
-              jsonobject4["TofZ"] = NULL;
-              jsonobject4["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                if (!mesh.checkConnection()) {
-                  do {
-                    Serial.println(F("Reconnecting to mesh network..."));
-                  } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                } else {
-                  Serial.println(F("Send fail, Test OK"));
-                }
-              }
-            }
-            digitalWrite(LED_BUILTIN, HIGH);
-            delay(100);
-          }
-          digitalWrite(LED_BUILTIN, LOW);
-        }else if(NODE_4_RSSI >= NODE_3_RSSI){
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-            JsonArray jsonarray = doc.to<JsonArray>();
-            JsonObject jsonobject = jsonarray.createNestedObject();
-            jsonobject["NodeID"] = cNodeID_5;
-            jsonobject["usX"] = usX;
-            jsonobject["usY"] = usY;
-            jsonobject["usZ"] = usZ;
-            jsonobject["Unixtime"] = iUnixtime;
-            JsonObject jsonobject1 = jsonarray.createNestedObject();
-            jsonobject1["NodeID"] = eNodeID_2;
-            jsonobject1["Berat"] = Berat;
-            jsonobject1["Unixtime"] = jUnixtime;
-            JsonObject jsonobject2 = jsonarray.createNestedObject();
-            jsonobject2["NodeID"] = node_asal;
-            jsonobject2["Suhu"] = suhu;
-            jsonobject2["Kelembapan"] = kelembapan;
-            jsonobject2["Unixtime"] = now.unixtime();
-            JsonObject jsonobject3 = jsonarray.createNestedObject();
-            jsonobject3["NodeID"] = 4;
-            jsonobject3["TofX"] = NULL;
-            jsonobject3["TofY"] = NULL;
-            jsonobject3["TofZ"] = NULL;
-            jsonobject3["Unixtime"] = NULL;
-            datakirim = "";
-            serializeJson(doc, datakirim);
-            char kirim_loop[datakirim.length() + 1];
-            datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = cNodeID_5;
-              jsonobject["usX"] = usX;
-              jsonobject["usY"] = usY;
-              jsonobject["usZ"] = usZ;
-              jsonobject["Unixtime"] = iUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = eNodeID_2;
-              jsonobject1["Berat"] = Berat;
-              jsonobject1["Unixtime"] = jUnixtime;
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = node_asal;
-              jsonobject2["Suhu"] = suhu;
-              jsonobject2["Kelembapan"] = kelembapan;
-              jsonobject2["Unixtime"] = now.unixtime();
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 4;
-              jsonobject3["TofX"] = NULL;
-              jsonobject3["TofY"] = NULL;
-              jsonobject3["TofZ"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              JsonObject jsonobject4 = jsonarray.createNestedObject();
-              jsonobject4["NodeID"] = 3;
-              jsonobject4["Pitch"] = NULL;
-              jsonobject4["Roll"] = NULL;
-              jsonobject4["Frekuensi"] = NULL;
-              jsonobject4["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                if (!mesh.checkConnection()) {
-                  do {
-                    Serial.println(F("Reconnecting to mesh network..."));
-                  } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                } else {
-                  Serial.println(F("Send fail, Test OK"));
-                }
-              }
-            }
-            digitalWrite(LED_BUILTIN, HIGH);
-            delay(100);
-          }
-          digitalWrite(LED_BUILTIN, LOW);
-        }
-      }
-      if (jumlahnode[0] == 5 && jumlahnode[1] == 3) {
-        JsonObject NodeID_5 = doc[0];
-        int dNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t kUnixtime = NodeID_5["Unixtime"];
-        JsonObject NodeID_3 = doc[1];
-        int dNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t lUnixtime = NodeID_3["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = dNodeID_5;
-        jsonobject["usX"] = usX;
-        jsonobject["usY"] = usY;
-        jsonobject["usZ"] = usZ;
-        jsonobject["Unixtime"] = kUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = dNodeID_3;
-        jsonobject1["Pitch"] = Pitch;
-        jsonobject1["Roll"] = Roll;
-        jsonobject1["Frekuensi"] = Frekuensi;
-        jsonobject1["Unixtime"] = lUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = node_asal;
-        jsonobject2["Suhu"] = suhu;
-        jsonobject2["Kelembapan"] = kelembapan;
-        jsonobject2["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(NODE_2_RSSI >= NODE_4_RSSI){
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-            JsonArray jsonarray = doc.to<JsonArray>();
-            JsonObject jsonobject = jsonarray.createNestedObject();
-            jsonobject["NodeID"] = dNodeID_5;
-            jsonobject["usX"] = usX;
-            jsonobject["usY"] = usY;
-            jsonobject["usZ"] = usZ;
-            jsonobject["Unixtime"] = kUnixtime;
-            JsonObject jsonobject1 = jsonarray.createNestedObject();
-            jsonobject1["NodeID"] = dNodeID_3;
-            jsonobject1["Pitch"] = Pitch;
-            jsonobject1["Roll"] = Roll;
-            jsonobject1["Frekuensi"] = Frekuensi;
-            jsonobject1["Unixtime"] = lUnixtime;
-            JsonObject jsonobject2 = jsonarray.createNestedObject();
-            jsonobject2["NodeID"] = node_asal;
-            jsonobject2["Suhu"] = suhu;
-            jsonobject2["Kelembapan"] = kelembapan;
-            jsonobject2["Unixtime"] = now.unixtime();
-            JsonObject jsonobject3 = jsonarray.createNestedObject();
-            jsonobject3["NodeID"] = 2;
-            jsonobject3["Berat"] = NULL;
-            jsonobject3["Unixtime"] = NULL;
-            datakirim = "";
-            serializeJson(doc, datakirim);
-            char kirim_loop[datakirim.length() + 1];
-            datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = dNodeID_5;
-              jsonobject["usX"] = usX;
-              jsonobject["usY"] = usY;
-              jsonobject["usZ"] = usZ;
-              jsonobject["Unixtime"] = kUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = dNodeID_3;
-              jsonobject1["Pitch"] = Pitch;
-              jsonobject1["Roll"] = Roll;
-              jsonobject1["Frekuensi"] = Frekuensi;
-              jsonobject1["Unixtime"] = lUnixtime;
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = node_asal;
-              jsonobject2["Suhu"] = suhu;
-              jsonobject2["Kelembapan"] = kelembapan;
-              jsonobject2["Unixtime"] = now.unixtime();
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 2;
-              jsonobject3["Berat"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              JsonObject jsonobject4 = jsonarray.createNestedObject();
-              jsonobject4["NodeID"] = 4;
-              jsonobject4["TofX"] = NULL;
-              jsonobject4["TofY"] = NULL;
-              jsonobject4["TofZ"] = NULL;
-              jsonobject4["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                if (!mesh.checkConnection()) {
-                  do {
-                    Serial.println(F("Reconnecting to mesh network..."));
-                  } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                } else {
-                  Serial.println(F("Send fail, Test OK"));
-                }
-              }
-            }
-            digitalWrite(LED_BUILTIN, HIGH);
-            delay(100);
-          }
-          digitalWrite(LED_BUILTIN, LOW);
-        }else if(NODE_4_RSSI >= NODE_2_RSSI){
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-            JsonArray jsonarray = doc.to<JsonArray>();
-            JsonObject jsonobject = jsonarray.createNestedObject();
-            jsonobject["NodeID"] = dNodeID_5;
-            jsonobject["usX"] = usX;
-            jsonobject["usY"] = usY;
-            jsonobject["usZ"] = usZ;
-            jsonobject["Unixtime"] = kUnixtime;
-            JsonObject jsonobject1 = jsonarray.createNestedObject();
-            jsonobject1["NodeID"] = dNodeID_3;
-            jsonobject1["Pitch"] = Pitch;
-            jsonobject1["Roll"] = Roll;
-            jsonobject1["Frekuensi"] = Frekuensi;
-            jsonobject1["Unixtime"] = lUnixtime;
-            JsonObject jsonobject2 = jsonarray.createNestedObject();
-            jsonobject2["NodeID"] = node_asal;
-            jsonobject2["Suhu"] = suhu;
-            jsonobject2["Kelembapan"] = kelembapan;
-            jsonobject2["Unixtime"] = now.unixtime();
-            JsonObject jsonobject3 = jsonarray.createNestedObject();
-            jsonobject3["NodeID"] = 4;
-            jsonobject3["TofX"] = NULL;
-            jsonobject3["TofY"] = NULL;
-            jsonobject3["TofZ"] = NULL;
-            jsonobject3["Unixtime"] = NULL;
-            datakirim = "";
-            serializeJson(doc, datakirim);
-            char kirim_loop[datakirim.length() + 1];
-            datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = dNodeID_5;
-              jsonobject["usX"] = usX;
-              jsonobject["usY"] = usY;
-              jsonobject["usZ"] = usZ;
-              jsonobject["Unixtime"] = kUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = dNodeID_3;
-              jsonobject1["Pitch"] = Pitch;
-              jsonobject1["Roll"] = Roll;
-              jsonobject1["Frekuensi"] = Frekuensi;
-              jsonobject1["Unixtime"] = lUnixtime;
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = node_asal;
-              jsonobject2["Suhu"] = suhu;
-              jsonobject2["Kelembapan"] = kelembapan;
-              jsonobject2["Unixtime"] = now.unixtime();
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 4;
-              jsonobject3["TofX"] = NULL;
-              jsonobject3["TofY"] = NULL;
-              jsonobject3["TofZ"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              JsonObject jsonobject4 = jsonarray.createNestedObject();
-              jsonobject4["NodeID"] = 2;
-              jsonobject4["Berat"] = NULL;
-              jsonobject4["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                if (!mesh.checkConnection()) {
-                  do {
-                    Serial.println(F("Reconnecting to mesh network..."));
-                  } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                } else {
-                  Serial.println(F("Send fail, Test OK"));
-                }
-              }
-            }
-            digitalWrite(LED_BUILTIN, HIGH);
-            delay(100);
-          }
-          digitalWrite(LED_BUILTIN, LOW);
-        }
-      }
-      if (jumlahnode[0] == 5 && jumlahnode[1] == 4) {
-        JsonObject NodeID_5 = doc[0];
-        int dNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t kUnixtime = NodeID_5["Unixtime"];
-        JsonObject NodeID_4 = doc[1];
-        int dNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t lUnixtime = NodeID_4["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = dNodeID_5;
-        jsonobject["usX"] = usX;
-        jsonobject["usY"] = usY;
-        jsonobject["usZ"] = usZ;
-        jsonobject["Unixtime"] = kUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = dNodeID_4;
-        jsonobject1["TofX"] = TofX;
-        jsonobject1["TofY"] = TofY;
-        jsonobject1["TofZ"] = TofZ;
-        jsonobject1["Unixtime"] = lUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = node_asal;
-        jsonobject2["Suhu"] = suhu;
-        jsonobject2["Kelembapan"] = kelembapan;
-        jsonobject2["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(NODE_2_RSSI >= NODE_3_RSSI){
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-            JsonArray jsonarray = doc.to<JsonArray>();
-            JsonObject jsonobject = jsonarray.createNestedObject();
-            jsonobject["NodeID"] = dNodeID_5;
-            jsonobject["usX"] = usX;
-            jsonobject["usY"] = usY;
-            jsonobject["usZ"] = usZ;
-            jsonobject["Unixtime"] = kUnixtime;
-            JsonObject jsonobject1 = jsonarray.createNestedObject();
-            jsonobject1["NodeID"] = dNodeID_4;
-            jsonobject1["TofX"] = TofX;
-            jsonobject1["TofY"] = TofY;
-            jsonobject1["TofZ"] = TofZ;
-            jsonobject1["Unixtime"] = lUnixtime;
-            JsonObject jsonobject2 = jsonarray.createNestedObject();
-            jsonobject2["NodeID"] = node_asal;
-            jsonobject2["Suhu"] = suhu;
-            jsonobject2["Kelembapan"] = kelembapan;
-            jsonobject2["Unixtime"] = now.unixtime();
-            JsonObject jsonobject3 = jsonarray.createNestedObject();
-            jsonobject3["NodeID"] = 2;
-            jsonobject3["Berat"] = NULL;
-            jsonobject3["Unixtime"] = NULL;
-            datakirim = "";
-            serializeJson(doc, datakirim);
-            char kirim_loop[datakirim.length() + 1];
-            datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = dNodeID_5;
-              jsonobject["usX"] = usX;
-              jsonobject["usY"] = usY;
-              jsonobject["usZ"] = usZ;
-              jsonobject["Unixtime"] = kUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = dNodeID_4;
-              jsonobject1["TofX"] = TofX;
-              jsonobject1["TofY"] = TofY;
-              jsonobject1["TofZ"] = TofZ;
-              jsonobject1["Unixtime"] = lUnixtime;
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = node_asal;
-              jsonobject2["Suhu"] = suhu;
-              jsonobject2["Kelembapan"] = kelembapan;
-              jsonobject2["Unixtime"] = now.unixtime();
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 2;
-              jsonobject3["Berat"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              JsonObject jsonobject4 = jsonarray.createNestedObject();
-              jsonobject4["NodeID"] = 3;
-              jsonobject4["Pitch"] = NULL;
-              jsonobject4["Roll"] = NULL;
-              jsonobject4["Frekuensi"] = NULL;
-              jsonobject4["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                if (!mesh.checkConnection()) {
-                  do {
-                    Serial.println(F("Reconnecting to mesh network..."));
-                  } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                } else {
-                  Serial.println(F("Send fail, Test OK"));
-                }
-              }
-            }
-            digitalWrite(LED_BUILTIN, HIGH);
-            delay(100);
-          }
-          digitalWrite(LED_BUILTIN, LOW);
-        }else if(NODE_3_RSSI >= NODE_2_RSSI){
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-            JsonArray jsonarray = doc.to<JsonArray>();
-            JsonObject jsonobject = jsonarray.createNestedObject();
-            jsonobject["NodeID"] = dNodeID_5;
-            jsonobject["usX"] = usX;
-            jsonobject["usY"] = usY;
-            jsonobject["usZ"] = usZ;
-            jsonobject["Unixtime"] = kUnixtime;
-            JsonObject jsonobject1 = jsonarray.createNestedObject();
-            jsonobject1["NodeID"] = dNodeID_4;
-            jsonobject1["TofX"] = TofX;
-            jsonobject1["TofY"] = TofY;
-            jsonobject1["TofZ"] = TofZ;
-            jsonobject1["Unixtime"] = lUnixtime;
-            JsonObject jsonobject2 = jsonarray.createNestedObject();
-            jsonobject2["NodeID"] = node_asal;
-            jsonobject2["Suhu"] = suhu;
-            jsonobject2["Kelembapan"] = kelembapan;
-            jsonobject2["Unixtime"] = now.unixtime();
-            JsonObject jsonobject3 = jsonarray.createNestedObject();
-            jsonobject3["NodeID"] = 3;
-            jsonobject3["Pitch"] = NULL;
-            jsonobject3["Roll"] = NULL;
-            jsonobject3["Frekuensi"] = NULL;
-            jsonobject3["Unixtime"] = NULL;
-            datakirim = "";
-            serializeJson(doc, datakirim);
-            char kirim_loop[datakirim.length() + 1];
-            datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-            if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-              Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-              JsonArray jsonarray = doc.to<JsonArray>();
-              JsonObject jsonobject = jsonarray.createNestedObject();
-              jsonobject["NodeID"] = dNodeID_5;
-              jsonobject["usX"] = usX;
-              jsonobject["usY"] = usY;
-              jsonobject["usZ"] = usZ;
-              jsonobject["Unixtime"] = kUnixtime;
-              JsonObject jsonobject1 = jsonarray.createNestedObject();
-              jsonobject1["NodeID"] = dNodeID_4;
-              jsonobject1["TofX"] = TofX;
-              jsonobject1["TofY"] = TofY;
-              jsonobject1["TofZ"] = TofZ;
-              jsonobject1["Unixtime"] = lUnixtime;
-              JsonObject jsonobject2 = jsonarray.createNestedObject();
-              jsonobject2["NodeID"] = node_asal;
-              jsonobject2["Suhu"] = suhu;
-              jsonobject2["Kelembapan"] = kelembapan;
-              jsonobject2["Unixtime"] = now.unixtime();
-              JsonObject jsonobject3 = jsonarray.createNestedObject();
-              jsonobject3["NodeID"] = 3;
-              jsonobject3["Pitch"] = NULL;
-              jsonobject3["Roll"] = NULL;
-              jsonobject3["Frekuensi"] = NULL;
-              jsonobject3["Unixtime"] = NULL;
-              JsonObject jsonobject4 = jsonarray.createNestedObject();
-              jsonobject4["NodeID"] = 2;
-              jsonobject4["Berat"] = NULL;
-              jsonobject4["Unixtime"] = NULL;
-              datakirim = "";
-              serializeJson(doc, datakirim);
-              char kirim_loop[datakirim.length() + 1];
-              datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-              if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-                Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-                if (!mesh.checkConnection()) {
-                  do {
-                    Serial.println(F("Reconnecting to mesh network..."));
-                  } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-                } else {
-                  Serial.println(F("Send fail, Test OK"));
-                }
-              }
-            }
-            digitalWrite(LED_BUILTIN, HIGH);
-            delay(100);
-          }
-          digitalWrite(LED_BUILTIN, LOW);
-        }
-      }
-    }
-//==================================================POSISI NODE KE - 4==================================================  
-    if( count == 3){
-      Serial.print("Received packet from NODE " + jumlahnode[2]);
-      if(jumlahnode[0] == 2 && jumlahnode[1] == 3 && jumlahnode[2] == 4){
-        JsonObject NodeID_2 = doc[0];
-        int fNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t oUnixtime = NodeID_2["Unixtime"];
-        JsonObject NodeID_3 = doc[1];
-        int fNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t pUnixtime = NodeID_3["Unixtime"];
-        JsonObject NodeID_4 = doc[2];
-        int fNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t qUnxtime = NodeID_4["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = fNodeID_2;
-        jsonobject["Berat"] = Berat;
-        jsonobject["Unixtime"] = oUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = fNodeID_3;
-        jsonobject1["Pitch"] = Pitch;
-        jsonobject1["Roll"] = Roll;
-        jsonobject1["Frekuensi"] = Frekuensi;
-        jsonobject1["Unixtime"] = pUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = fNodeID_4;
-        jsonobject2["TofX"] = TofX;
-        jsonobject2["TofY"] = TofY;
-        jsonobject2["TofZ"] = TofZ;
-        jsonobject2["Unixtime"] = qUnxtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = node_asal;
-        jsonobject3["Suhu"] = suhu;
-        jsonobject3["Kelembapan"] = kelembapan;
-        jsonobject3["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-          JsonArray jsonarray = doc.to<JsonArray>();
-          JsonObject jsonobject = jsonarray.createNestedObject();
-          jsonobject["NodeID"] = fNodeID_2;
-          jsonobject["Berat"] = Berat;
-          jsonobject["Unixtime"] = oUnixtime;
-          JsonObject jsonobject1 = jsonarray.createNestedObject();
-          jsonobject1["NodeID"] = fNodeID_3;
-          jsonobject1["Pitch"] = Pitch;
-          jsonobject1["Roll"] = Roll;
-          jsonobject1["Frekuensi"] = Frekuensi;
-          jsonobject1["Unixtime"] = pUnixtime;
-          JsonObject jsonobject2 = jsonarray.createNestedObject();
-          jsonobject2["NodeID"] = fNodeID_4;
-          jsonobject2["TofX"] = TofX;
-          jsonobject2["TofY"] = TofY;
-          jsonobject2["TofZ"] = TofZ;
-          jsonobject2["Unixtime"] = qUnxtime;
-          JsonObject jsonobject3 = jsonarray.createNestedObject();
-          jsonobject3["NodeID"] = node_asal;
-          jsonobject3["Suhu"] = suhu;
-          jsonobject3["Kelembapan"] = kelembapan;
-          jsonobject3["Unixtime"] = now.unixtime();
-          JsonObject jsonobject4 = jsonarray.createNestedObject();
-          jsonobject4["NodeID"] = 5;
-          jsonobject4["usX"] = NULL;
-          jsonobject4["usY"] = NULL;
-          jsonobject4["usZ"] = NULL;
-          jsonobject4["Unixtime"] = NULL;
-          datakirim = "";
-          serializeJson(doc, datakirim);
-          char kirim_loop[datakirim.length() + 1];
-          datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-            if (!mesh.checkConnection()) {
-              do {
-                Serial.println(F("Reconnecting to mesh network..."));
-              } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-            } else {
-              Serial.println(F("Send fail, Test OK"));
-            }
+    //==================================================POSISI NODE KE - 3==================================================
+    if (pesan.ID == 23) {
+      if (NODE_4_RSSI >= NODE_5_RSSI) {
+        paket_pesan pesan = { 231, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_4);
+        bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+        if (!NODE_4) {
+          paket_pesan pesan = { 2314, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+          RF24NetworkHeader header(/*to node*/ NODE_5);
+          bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+          Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+          if (!NODE_5) {
+            paket_pesan pesan = { 23145, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_Master);
+            bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
           }
           digitalWrite(LED_BUILTIN, HIGH);
           delay(100);
         }
         digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 2 && jumlahnode[1] == 3 && jumlahnode[2] == 5){
-        JsonObject NodeID_2 = doc[0];
-        int fNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t oUnixtime = NodeID_2["Unixtime"];
-        JsonObject NodeID_3 = doc[1];
-        int fNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t pUnixtime = NodeID_3["Unixtime"];
-        JsonObject NodeID_5 = doc[2];
-        int fNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t qUnxtime = NodeID_5["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = fNodeID_2;
-        jsonobject["Berat"] = Berat;
-        jsonobject["Unixtime"] = oUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = fNodeID_3;
-        jsonobject1["Pitch"] = Pitch;
-        jsonobject1["Roll"] = Roll;
-        jsonobject1["Frekuensi"] = Frekuensi;
-        jsonobject1["Unixtime"] = pUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = fNodeID_5;
-        jsonobject2["usX"] = usX;
-        jsonobject2["usY"] = usY;
-        jsonobject2["usZ"] = usZ;
-        jsonobject2["Unixtime"] = qUnxtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = node_asal;
-        jsonobject3["Suhu"] = suhu;
-        jsonobject3["Kelembapan"] = kelembapan;
-        jsonobject3["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-          JsonArray jsonarray = doc.to<JsonArray>();
-          JsonObject jsonobject = jsonarray.createNestedObject();
-          jsonobject["NodeID"] = fNodeID_2;
-          jsonobject["Berat"] = Berat;
-          jsonobject["Unixtime"] = oUnixtime;
-          JsonObject jsonobject1 = jsonarray.createNestedObject();
-          jsonobject1["NodeID"] = fNodeID_3;
-          jsonobject1["Pitch"] = Pitch;
-          jsonobject1["Roll"] = Roll;
-          jsonobject1["Frekuensi"] = Frekuensi;
-          jsonobject1["Unixtime"] = pUnixtime;
-          JsonObject jsonobject2 = jsonarray.createNestedObject();
-          jsonobject2["NodeID"] = fNodeID_5;
-          jsonobject2["usX"] = usX;
-          jsonobject2["usY"] = usY;
-          jsonobject2["usZ"] = usZ;
-          jsonobject2["Unixtime"] = qUnxtime;
-          JsonObject jsonobject3 = jsonarray.createNestedObject();
-          jsonobject3["NodeID"] = node_asal;
-          jsonobject3["Suhu"] = suhu;
-          jsonobject3["Kelembapan"] = kelembapan;
-          jsonobject3["Unixtime"] = now.unixtime();
-          JsonObject jsonobject4 = jsonarray.createNestedObject();
-          jsonobject4["NodeID"] = 4;
-          jsonobject4["TofX"] = NULL;
-          jsonobject4["TofY"] = NULL;
-          jsonobject4["TofZ"] = NULL;
-          jsonobject4["Unixtime"] = NULL;
-          datakirim = "";
-          serializeJson(doc, datakirim);
-          char kirim_loop[datakirim.length() + 1];
-          datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-            if (!mesh.checkConnection()) {
-              do {
-                Serial.println(F("Reconnecting to mesh network..."));
-              } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-            } else {
-              Serial.println(F("Send fail, Test OK"));
-            }
-          }
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 2 && jumlahnode[1] == 4 && jumlahnode[2] == 3){
-        JsonObject NodeID_2 = doc[0];
-        int gNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t rUnixtime = NodeID_2["Unixtime"];
-        JsonObject NodeID_4 = doc[1];
-        int gNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t sUnixtime = NodeID_4["Unixtime"];
-        JsonObject NodeID_3 = doc[2];
-        int gNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t tUnixtime = NodeID_3["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = gNodeID_2;
-        jsonobject["Berat"] = Berat;
-        jsonobject["Unixtime"] = rUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = gNodeID_4;
-        jsonobject1["TofX"] = TofX;
-        jsonobject1["TofY"] = TofY;
-        jsonobject1["TofZ"] = TofZ;
-        jsonobject1["Unixtime"] = sUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = gNodeID_3;
-        jsonobject2["Pitch"] = Pitch;
-        jsonobject2["Roll"] = Roll;
-        jsonobject2["Frekuensi"] = Frekuensi;
-        jsonobject2["Unixtime"] = tUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = node_asal;
-        jsonobject3["Suhu"] = suhu;
-        jsonobject3["Kelembapan"] = kelembapan;
-        jsonobject3["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-          JsonArray jsonarray = doc.to<JsonArray>();
-          JsonObject jsonobject = jsonarray.createNestedObject();
-          jsonobject["NodeID"] = gNodeID_2;
-          jsonobject["Berat"] = Berat;
-          jsonobject["Unixtime"] = rUnixtime;
-          JsonObject jsonobject1 = jsonarray.createNestedObject();
-          jsonobject1["NodeID"] = gNodeID_4;
-          jsonobject1["TofX"] = TofX;
-          jsonobject1["TofY"] = TofY;
-          jsonobject1["TofZ"] = TofZ;
-          jsonobject1["Unixtime"] = sUnixtime;
-          JsonObject jsonobject2 = jsonarray.createNestedObject();
-          jsonobject2["NodeID"] = gNodeID_3;
-          jsonobject2["Pitch"] = Pitch;
-          jsonobject2["Roll"] = Roll;
-          jsonobject2["Frekuensi"] = Frekuensi;
-          jsonobject2["Unixtime"] = tUnixtime;
-          JsonObject jsonobject3 = jsonarray.createNestedObject();
-          jsonobject3["NodeID"] = node_asal;
-          jsonobject3["Suhu"] = suhu;
-          jsonobject3["Kelembapan"] = kelembapan;
-          jsonobject3["Unixtime"] = now.unixtime();
-          JsonObject jsonobject4 = jsonarray.createNestedObject();
-          jsonobject4["NodeID"] = 5;
-          jsonobject4["Suhu"] = NULL;
-          jsonobject4["Kelembapan"] = NULL;
-          jsonobject4["Unixtime"] = NULL;
-          datakirim = "";
-          serializeJson(doc, datakirim);
-          char kirim_loop[datakirim.length() + 1];
-          datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-            if (!mesh.checkConnection()) {
-              do {
-                Serial.println(F("Reconnecting to mesh network..."));
-              } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-            } else {
-              Serial.println(F("Send fail, Test OK"));
-            }
-          }
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 2 && jumlahnode[1] == 4 && jumlahnode[2] == 5){
-        JsonObject NodeID_2 = doc[0];
-        int gNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t rUnixtime = NodeID_2["Unixtime"];
-        JsonObject NodeID_4 = doc[1];
-        int gNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t sUnixtime = NodeID_4["Unixtime"];
-        JsonObject NodeID_5 = doc[2];
-        int gNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t tUnixtime = NodeID_5["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = gNodeID_2;
-        jsonobject["Berat"] = Berat;
-        jsonobject["Unixtime"] = rUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = gNodeID_4;
-        jsonobject1["TofX"] = TofX;
-        jsonobject1["TofY"] = TofY;
-        jsonobject1["TofZ"] = TofZ;
-        jsonobject1["Unixtime"] = sUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = gNodeID_5;
-        jsonobject2["usX"] = usX;
-        jsonobject2["usY"] = usY;
-        jsonobject2["usZ"] = usZ;
-        jsonobject2["Unixtime"] = tUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = node_asal;
-        jsonobject3["Suhu"] = suhu;
-        jsonobject3["Kelembapan"] = kelembapan;
-        jsonobject3["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-          JsonArray jsonarray = doc.to<JsonArray>();
-          JsonObject jsonobject = jsonarray.createNestedObject();
-          jsonobject["NodeID"] = gNodeID_2;
-          jsonobject["Berat"] = Berat;
-          jsonobject["Unixtime"] = rUnixtime;
-          JsonObject jsonobject1 = jsonarray.createNestedObject();
-          jsonobject1["NodeID"] = gNodeID_4;
-          jsonobject1["TofX"] = TofX;
-          jsonobject1["TofY"] = TofY;
-          jsonobject1["TofZ"] = TofZ;
-          jsonobject1["Unixtime"] = sUnixtime;
-          JsonObject jsonobject2 = jsonarray.createNestedObject();
-          jsonobject2["NodeID"] = gNodeID_5;
-          jsonobject2["usX"] = usX;
-          jsonobject2["usY"] = usY;
-          jsonobject2["usZ"] = usZ;
-          jsonobject2["Unixtime"] = tUnixtime;
-          JsonObject jsonobject3 = jsonarray.createNestedObject();
-          jsonobject3["NodeID"] = node_asal;
-          jsonobject3["Suhu"] = suhu;
-          jsonobject3["Kelembapan"] = kelembapan;
-          jsonobject3["Unixtime"] = now.unixtime();
-          JsonObject jsonobject4 = jsonarray.createNestedObject();
-          jsonobject4["NodeID"] = 3;
-          jsonobject4["Pitch"] = NULL;
-          jsonobject4["Roll"] = NULL;
-          jsonobject4["Frekuensi"] = NULL;
-          jsonobject4["Unixtime"] = NULL;
-          datakirim = "";
-          serializeJson(doc, datakirim);
-          char kirim_loop[datakirim.length() + 1];
-          datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-            if (!mesh.checkConnection()) {
-              do {
-                Serial.println(F("Reconnecting to mesh network..."));
-              } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-            } else {
-              Serial.println(F("Send fail, Test OK"));
-            }
-          }
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 2 && jumlahnode[1] == 5 && jumlahnode[2] == 3){
-        JsonObject NodeID_2 = doc[0];
-        int gNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t rUnixtime = NodeID_2["Unixtime"];
-        JsonObject NodeID_5 = doc[1];
-        int gNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t sUnixtime = NodeID_5["Unixtime"];
-        JsonObject NodeID_3 = doc[2];
-        int gNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t tUnixtime = NodeID_3["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = gNodeID_2;
-        jsonobject["Berat"] = Berat;
-        jsonobject["Unixtime"] = rUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = gNodeID_5;
-        jsonobject1["usX"] = usX;
-        jsonobject1["usY"] = usY;
-        jsonobject1["usZ"] = usZ;
-        jsonobject1["Unixtime"] = sUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = gNodeID_3;
-        jsonobject2["Pitch"] = Pitch;
-        jsonobject2["Roll"] = Roll;
-        jsonobject2["Frekuensi"] = Frekuensi;
-        jsonobject2["Unixtime"] = tUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = node_asal;
-        jsonobject3["Suhu"] = suhu;
-        jsonobject3["Kelembapan"] = kelembapan;
-        jsonobject3["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-          JsonArray jsonarray = doc.to<JsonArray>();
-          JsonObject jsonobject = jsonarray.createNestedObject();
-          jsonobject["NodeID"] = gNodeID_2;
-          jsonobject["Berat"] = Berat;
-          jsonobject["Unixtime"] = rUnixtime;
-          JsonObject jsonobject1 = jsonarray.createNestedObject();
-          jsonobject1["NodeID"] = gNodeID_5;
-          jsonobject1["usX"] = usX;
-          jsonobject1["usY"] = usY;
-          jsonobject1["usZ"] = usZ;
-          jsonobject1["Unixtime"] = sUnixtime;
-          JsonObject jsonobject2 = jsonarray.createNestedObject();
-          jsonobject2["NodeID"] = gNodeID_3;
-          jsonobject2["Pitch"] = Pitch;
-          jsonobject2["Roll"] = Roll;
-          jsonobject2["Frekuensi"] = Frekuensi;
-          jsonobject2["Unixtime"] = tUnixtime;
-          JsonObject jsonobject3 = jsonarray.createNestedObject();
-          jsonobject3["NodeID"] = node_asal;
-          jsonobject3["Suhu"] = suhu;
-          jsonobject3["Kelembapan"] = kelembapan;
-          jsonobject3["Unixtime"] = now.unixtime();
-          JsonObject jsonobject4 = jsonarray.createNestedObject();
-          jsonobject4["NodeID"] = 4;
-          jsonobject4["TofX"] = NULL;
-          jsonobject4["TofY"] = NULL;
-          jsonobject4["TofZ"] = NULL;
-          jsonobject4["Unixtime"] = NULL;
-          datakirim = "";
-          serializeJson(doc, datakirim);
-          char kirim_loop[datakirim.length() + 1];
-          datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-            if (!mesh.checkConnection()) {
-              do {
-                Serial.println(F("Reconnecting to mesh network..."));
-              } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-            } else {
-              Serial.println(F("Send fail, Test OK"));
-            }
-          }
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 2 && jumlahnode[1] == 5 && jumlahnode[2] == 4){
-        JsonObject NodeID_2 = doc[0];
-        int gNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t rUnixtime = NodeID_2["Unixtime"];
-        JsonObject NodeID_5 = doc[1];
-        int gNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t sUnixtime = NodeID_5["Unixtime"];
-        JsonObject NodeID_4 = doc[2];
-        int gNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t tUnixtime = NodeID_4["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = gNodeID_2;
-        jsonobject["Berat"] = Berat;
-        jsonobject["Unixtime"] = rUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = gNodeID_5;
-        jsonobject1["usX"] = usX;
-        jsonobject1["usY"] = usY;
-        jsonobject1["usZ"] = usZ;
-        jsonobject1["Unixtime"] = sUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = gNodeID_4;
-        jsonobject2["TofX"] = TofX;
-        jsonobject2["TofY"] = TofY;
-        jsonobject2["TofZ"] = TofZ;
-        jsonobject2["Unixtime"] = tUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = node_asal;
-        jsonobject3["Suhu"] = suhu;
-        jsonobject3["Kelembapan"] = kelembapan;
-        jsonobject3["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-          JsonArray jsonarray = doc.to<JsonArray>();
-          JsonObject jsonobject = jsonarray.createNestedObject();
-          jsonobject["NodeID"] = gNodeID_2;
-          jsonobject["Berat"] = Berat;
-          jsonobject["Unixtime"] = rUnixtime;
-          JsonObject jsonobject1 = jsonarray.createNestedObject();
-          jsonobject1["NodeID"] = gNodeID_5;
-          jsonobject1["usX"] = usX;
-          jsonobject1["usY"] = usY;
-          jsonobject1["usZ"] = usZ;
-          jsonobject1["Unixtime"] = sUnixtime;
-          JsonObject jsonobject2 = jsonarray.createNestedObject();
-          jsonobject2["NodeID"] = gNodeID_4;
-          jsonobject2["TofX"] = TofX;
-          jsonobject2["TofY"] = TofY;
-          jsonobject2["TofZ"] = TofZ;
-          jsonobject2["Unixtime"] = tUnixtime;
-          JsonObject jsonobject3 = jsonarray.createNestedObject();
-          jsonobject3["NodeID"] = node_asal;
-          jsonobject3["Suhu"] = suhu;
-          jsonobject3["Kelembapan"] = kelembapan;
-          jsonobject3["Unixtime"] = now.unixtime();
-          JsonObject jsonobject4 = jsonarray.createNestedObject();
-          jsonobject4["NodeID"] = 3;
-          jsonobject4["Pitch"] = NULL;
-          jsonobject4["Roll"] = NULL;
-          jsonobject4["Frekuensi"] = NULL;
-          jsonobject4["Unixtime"] = NULL;
-          datakirim = "";
-          serializeJson(doc, datakirim);
-          char kirim_loop[datakirim.length() + 1];
-          datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-            if (!mesh.checkConnection()) {
-              do {
-                Serial.println(F("Reconnecting to mesh network..."));
-              } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-            } else {
-              Serial.println(F("Send fail, Test OK"));
-            }
-          }
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 3 && jumlahnode[1] == 2 && jumlahnode[2] == 4){
-        JsonObject NodeID_3 = doc[0];
-        int hNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t uUnixtime = NodeID_3["Unixtime"];
-        JsonObject NodeID_2 = doc[1];
-        int hNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t vUnixtime = NodeID_2["Unixtime"];
-        JsonObject NodeID_4 = doc[2];
-        int hNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t wUnixtime = NodeID_4["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = hNodeID_3;
-        jsonobject["Pitch"] = Pitch;
-        jsonobject["Roll"] = Roll;
-        jsonobject["Frekuensi"] = Frekuensi;
-        jsonobject["Unixtime"] = uUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = hNodeID_2;
-        jsonobject1["Berat"] = Berat;
-        jsonobject1["Unixtime"] = vUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = hNodeID_4;
-        jsonobject2["TofX"] = TofX;
-        jsonobject2["TofY"] = TofY;
-        jsonobject2["TofZ"] = TofZ;
-        jsonobject2["Unixtime"] = wUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = node_asal;
-        jsonobject3["Suhu"] = suhu;
-        jsonobject3["Kelembapan"] = kelembapan;
-        jsonobject3["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-          JsonArray jsonarray = doc.to<JsonArray>();
-          JsonObject jsonobject = jsonarray.createNestedObject();
-          jsonobject["NodeID"] = hNodeID_3;
-          jsonobject["Pitch"] = Pitch;
-          jsonobject["Roll"] = Roll;
-          jsonobject["Frekuensi"] = Frekuensi;
-          jsonobject["Unixtime"] = uUnixtime;
-          JsonObject jsonobject1 = jsonarray.createNestedObject();
-          jsonobject1["NodeID"] = hNodeID_2;
-          jsonobject1["Berat"] = Berat;
-          jsonobject1["Unixtime"] = vUnixtime;
-          JsonObject jsonobject2 = jsonarray.createNestedObject();
-          jsonobject2["NodeID"] = hNodeID_4;
-          jsonobject2["TofX"] = TofX;
-          jsonobject2["TofY"] = TofY;
-          jsonobject2["TofZ"] = TofZ;
-          jsonobject2["Unixtime"] = wUnixtime;
-          JsonObject jsonobject3 = jsonarray.createNestedObject();
-          jsonobject3["NodeID"] = node_asal;
-          jsonobject3["Suhu"] = suhu;
-          jsonobject3["Kelembapan"] = kelembapan;
-          jsonobject3["Unixtime"] = now.unixtime();
-          JsonObject jsonobject4 = jsonarray.createNestedObject();
-          jsonobject4["NodeID"] = 5;
-          jsonobject4["usX"] = NULL;
-          jsonobject4["usY"] = NULL;
-          jsonobject4["usZ"] = NULL;
-          jsonobject4["Unixtime"] = NULL;
-          datakirim = "";
-          serializeJson(doc, datakirim);
-          char kirim_loop[datakirim.length() + 1];
-          datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-            if (!mesh.checkConnection()) {
-              do {
-                Serial.println(F("Reconnecting to mesh network..."));
-              } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-            } else {
-              Serial.println(F("Send fail, Test OK"));
-            }
-          }
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 3 && jumlahnode[1] == 2 && jumlahnode[2] == 5){
-        JsonObject NodeID_3 = doc[0];
-        int hNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t uUnixtime = NodeID_3["Unixtime"];
-        JsonObject NodeID_2 = doc[1];
-        int hNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t vUnixtime = NodeID_2["Unixtime"];
-        JsonObject NodeID_5 = doc[2];
-        int hNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t wUnixtime = NodeID_5["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = hNodeID_3;
-        jsonobject["Pitch"] = Pitch;
-        jsonobject["Roll"] = Roll;
-        jsonobject["Frekuensi"] = Frekuensi;
-        jsonobject["Unixtime"] = uUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = hNodeID_2;
-        jsonobject1["Berat"] = Berat;
-        jsonobject1["Unixtime"] = vUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = hNodeID_5;
-        jsonobject2["usX"] = usX;
-        jsonobject2["usY"] = usY;
-        jsonobject2["usZ"] = usZ;
-        jsonobject2["Unixtime"] = wUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = node_asal;
-        jsonobject3["Suhu"] = suhu;
-        jsonobject3["Kelembapan"] = kelembapan;
-        jsonobject3["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-          JsonArray jsonarray = doc.to<JsonArray>();
-          JsonObject jsonobject = jsonarray.createNestedObject();
-          jsonobject["NodeID"] = hNodeID_3;
-          jsonobject["Pitch"] = Pitch;
-          jsonobject["Roll"] = Roll;
-          jsonobject["Frekuensi"] = Frekuensi;
-          jsonobject["Unixtime"] = uUnixtime;
-          JsonObject jsonobject1 = jsonarray.createNestedObject();
-          jsonobject1["NodeID"] = hNodeID_2;
-          jsonobject1["Berat"] = Berat;
-          jsonobject1["Unixtime"] = vUnixtime;
-          JsonObject jsonobject2 = jsonarray.createNestedObject();
-          jsonobject2["NodeID"] = hNodeID_5;
-          jsonobject2["usX"] = usX;
-          jsonobject2["usY"] = usY;
-          jsonobject2["usZ"] = usZ;
-          jsonobject2["Unixtime"] = wUnixtime;
-          JsonObject jsonobject3 = jsonarray.createNestedObject();
-          jsonobject3["NodeID"] = node_asal;
-          jsonobject3["Suhu"] = suhu;
-          jsonobject3["Kelembapan"] = kelembapan;
-          jsonobject3["Unixtime"] = now.unixtime();
-          JsonObject jsonobject4 = jsonarray.createNestedObject();
-          jsonobject4["NodeID"] = 4;
-          jsonobject4["TofX"] = NULL;
-          jsonobject4["TofY"] = NULL;
-          jsonobject4["TofZ"] = NULL;
-          jsonobject4["Unixtime"] = NULL;
-          datakirim = "";
-          serializeJson(doc, datakirim);
-          char kirim_loop[datakirim.length() + 1];
-          datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-            if (!mesh.checkConnection()) {
-              do {
-                Serial.println(F("Reconnecting to mesh network..."));
-              } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-            } else {
-              Serial.println(F("Send fail, Test OK"));
-            }
-          }
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 3 && jumlahnode[1] == 4 && jumlahnode[2] == 2){
-        JsonObject NodeID_3 = doc[0];
-        int iNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t xUnixtime = NodeID_3["Unixtime"];
-        JsonObject NodeID_4 = doc[1];
-        int iNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t yUnixtime = NodeID_4["Unixtime"];
-        JsonObject NodeID_2 = doc[2];
-        int iNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t zUnixtime = NodeID_2["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = iNodeID_3;
-        jsonobject["Pitch"] = Pitch;
-        jsonobject["Roll"] = Roll;
-        jsonobject["Frekuensi"] = Frekuensi;
-        jsonobject["Unixtime"] = xUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = iNodeID_4;
-        jsonobject1["TofX"] = TofX;
-        jsonobject1["TofY"] = TofY;
-        jsonobject1["TofZ"] = TofZ;
-        jsonobject1["Unixtime"] = yUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = iNodeID_2;
-        jsonobject2["Berat"] = Berat;
-        jsonobject2["Unixtime"] = zUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = node_asal;
-        jsonobject3["Suhu"] = suhu;
-        jsonobject3["Kelembapan"] = kelembapan;
-        jsonobject3["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-          JsonArray jsonarray = doc.to<JsonArray>();
-          JsonObject jsonobject = jsonarray.createNestedObject();
-          jsonobject["NodeID"] = iNodeID_3;
-          jsonobject["Pitch"] = Pitch;
-          jsonobject["Roll"] = Roll;
-          jsonobject["Frekuensi"] = Frekuensi;
-          jsonobject["Unixtime"] = xUnixtime;
-          JsonObject jsonobject1 = jsonarray.createNestedObject();
-          jsonobject1["NodeID"] = iNodeID_4;
-          jsonobject1["TofX"] = TofX;
-          jsonobject1["TofY"] = TofY;
-          jsonobject1["TofZ"] = TofZ;
-          jsonobject1["Unixtime"] = yUnixtime;
-          JsonObject jsonobject2 = jsonarray.createNestedObject();
-          jsonobject2["NodeID"] = iNodeID_2;
-          jsonobject2["Berat"] = Berat;
-          jsonobject2["Unixtime"] = zUnixtime;
-          JsonObject jsonobject3 = jsonarray.createNestedObject();
-          jsonobject3["NodeID"] = node_asal;
-          jsonobject3["Suhu"] = suhu;
-          jsonobject3["Kelembapan"] = kelembapan;
-          jsonobject3["Unixtime"] = now.unixtime();
-          JsonObject jsonobject4 = jsonarray.createNestedObject();
-          jsonobject4["NodeID"] = 5;
-          jsonobject4["usX"] = NULL;
-          jsonobject4["usY"] = NULL;
-          jsonobject4["usZ"] = NULL;
-          jsonobject4["Unixtime"] = NULL;
-          datakirim = "";
-          serializeJson(doc, datakirim);
-          char kirim_loop[datakirim.length() + 1];
-          datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-            if (!mesh.checkConnection()) {
-              do {
-                Serial.println(F("Reconnecting to mesh network..."));
-              } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-            } else {
-              Serial.println(F("Send fail, Test OK"));
-            }
-          }
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 3 && jumlahnode[1] == 4 && jumlahnode[2] == 5){
-        JsonObject NodeID_3 = doc[0];
-        int iNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t xUnixtime = NodeID_3["Unixtime"];
-        JsonObject NodeID_4 = doc[1];
-        int iNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t yUnixtime = NodeID_4["Unixtime"];
-        JsonObject NodeID_5 = doc[2];
-        int iNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t zUnixtime = NodeID_5["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = iNodeID_3;
-        jsonobject["Pitch"] = Pitch;
-        jsonobject["Roll"] = Roll;
-        jsonobject["Frekuensi"] = Frekuensi;
-        jsonobject["Unixtime"] = xUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = iNodeID_4;
-        jsonobject1["TofX"] = TofX;
-        jsonobject1["TofY"] = TofY;
-        jsonobject1["TofZ"] = TofZ;
-        jsonobject1["Unixtime"] = yUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = iNodeID_5;
-        jsonobject2["usX"] = usX;
-        jsonobject2["usY"] = usY;
-        jsonobject2["usZ"] = usZ;
-        jsonobject2["Unixtime"] = zUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = node_asal;
-        jsonobject3["Suhu"] = suhu;
-        jsonobject3["Kelembapan"] = kelembapan;
-        jsonobject3["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-          JsonArray jsonarray = doc.to<JsonArray>();
-          JsonObject jsonobject = jsonarray.createNestedObject();
-          jsonobject["NodeID"] = iNodeID_3;
-          jsonobject["Pitch"] = Pitch;
-          jsonobject["Roll"] = Roll;
-          jsonobject["Frekuensi"] = Frekuensi;
-          jsonobject["Unixtime"] = xUnixtime;
-          JsonObject jsonobject1 = jsonarray.createNestedObject();
-          jsonobject1["NodeID"] = iNodeID_4;
-          jsonobject1["TofX"] = TofX;
-          jsonobject1["TofY"] = TofY;
-          jsonobject1["TofZ"] = TofZ;
-          jsonobject1["Unixtime"] = yUnixtime;
-          JsonObject jsonobject2 = jsonarray.createNestedObject();
-          jsonobject2["NodeID"] = iNodeID_5;
-          jsonobject2["usX"] = usX;
-          jsonobject2["usY"] = usY;
-          jsonobject2["usZ"] = usZ;
-          jsonobject2["Unixtime"] = zUnixtime;
-          JsonObject jsonobject3 = jsonarray.createNestedObject();
-          jsonobject3["NodeID"] = node_asal;
-          jsonobject3["Suhu"] = suhu;
-          jsonobject3["Kelembapan"] = kelembapan;
-          jsonobject3["Unixtime"] = now.unixtime();
-          JsonObject jsonobject4 = jsonarray.createNestedObject();
-          jsonobject4["NodeID"] = 2;
-          jsonobject4["Berat"] = NULL;
-          jsonobject4["Unixtime"] = NULL;
-          datakirim = "";
-          serializeJson(doc, datakirim);
-          char kirim_loop[datakirim.length() + 1];
-          datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-            if (!mesh.checkConnection()) {
-              do {
-                Serial.println(F("Reconnecting to mesh network..."));
-              } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-            } else {
-              Serial.println(F("Send fail, Test OK"));
-            }
-          }
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 3 && jumlahnode[1] == 5 && jumlahnode[2] == 2){
-        JsonObject NodeID_3 = doc[0];
-        int iNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t xUnixtime = NodeID_3["Unixtime"];
-        JsonObject NodeID_5 = doc[1];
-        int iNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t yUnixtime = NodeID_5["Unixtime"];
-        JsonObject NodeID_2 = doc[2];
-        int iNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t zUnixtime = NodeID_2["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = iNodeID_3;
-        jsonobject["Pitch"] = Pitch;
-        jsonobject["Roll"] = Roll;
-        jsonobject["Frekuensi"] = Frekuensi;
-        jsonobject["Unixtime"] = xUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = iNodeID_5;
-        jsonobject1["usX"] = usX;
-        jsonobject1["usY"] = usY;
-        jsonobject1["usZ"] = usZ;
-        jsonobject1["Unixtime"] = yUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = iNodeID_2;
-        jsonobject2["Berat"] = Berat;
-        jsonobject2["Unixtime"] = zUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = node_asal;
-        jsonobject3["Suhu"] = suhu;
-        jsonobject3["Kelembapan"] = kelembapan;
-        jsonobject3["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-          JsonArray jsonarray = doc.to<JsonArray>();
-          JsonObject jsonobject = jsonarray.createNestedObject();
-          jsonobject["NodeID"] = iNodeID_3;
-          jsonobject["Pitch"] = Pitch;
-          jsonobject["Roll"] = Roll;
-          jsonobject["Frekuensi"] = Frekuensi;
-          jsonobject["Unixtime"] = xUnixtime;
-          JsonObject jsonobject1 = jsonarray.createNestedObject();
-          jsonobject1["NodeID"] = iNodeID_5;
-          jsonobject1["usX"] = usX;
-          jsonobject1["usY"] = usY;
-          jsonobject1["usZ"] = usZ;
-          jsonobject1["Unixtime"] = yUnixtime;
-          JsonObject jsonobject2 = jsonarray.createNestedObject();
-          jsonobject2["NodeID"] = iNodeID_2;
-          jsonobject2["Berat"] = Berat;
-          jsonobject2["Unixtime"] = zUnixtime;
-          JsonObject jsonobject3 = jsonarray.createNestedObject();
-          jsonobject3["NodeID"] = node_asal;
-          jsonobject3["Suhu"] = suhu;
-          jsonobject3["Kelembapan"] = kelembapan;
-          jsonobject3["Unixtime"] = now.unixtime();
-          JsonObject jsonobject4 = jsonarray.createNestedObject();
-          jsonobject4["NodeID"] = 4;
-          jsonobject4["TofX"] = NULL;
-          jsonobject4["TofY"] = NULL;
-          jsonobject4["TofY"] = NULL;
-          jsonobject4["Unixtime"] = NULL;
-          datakirim = "";
-          serializeJson(doc, datakirim);
-          char kirim_loop[datakirim.length() + 1];
-          datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-            if (!mesh.checkConnection()) {
-              do {
-                Serial.println(F("Reconnecting to mesh network..."));
-              } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-            } else {
-              Serial.println(F("Send fail, Test OK"));
-            }
-          }
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 3 && jumlahnode[1] == 5 && jumlahnode[2] == 4){
-        JsonObject NodeID_3 = doc[0];
-        int iNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t xUnixtime = NodeID_3["Unixtime"];
-        JsonObject NodeID_5 = doc[1];
-        int iNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t yUnixtime = NodeID_5["Unixtime"];
-        JsonObject NodeID_4 = doc[2];
-        int iNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t zUnixtime = NodeID_4["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = iNodeID_3;
-        jsonobject["Pitch"] = Pitch;
-        jsonobject["Roll"] = Roll;
-        jsonobject["Frekuensi"] = Frekuensi;
-        jsonobject["Unixtime"] = xUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = iNodeID_5;
-        jsonobject1["usX"] = usX;
-        jsonobject1["usY"] = usY;
-        jsonobject1["usZ"] = usZ;
-        jsonobject1["Unixtime"] = yUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = iNodeID_4;
-        jsonobject2["TofX"] = TofX;
-        jsonobject2["TofY"] = TofY;
-        jsonobject2["TofZ"] = TofZ;
-        jsonobject2["Unixtime"] = zUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = node_asal;
-        jsonobject3["Suhu"] = suhu;
-        jsonobject3["Kelembapan"] = kelembapan;
-        jsonobject3["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-          JsonArray jsonarray = doc.to<JsonArray>();
-          JsonObject jsonobject = jsonarray.createNestedObject();
-          jsonobject["NodeID"] = iNodeID_3;
-          jsonobject["Pitch"] = Pitch;
-          jsonobject["Roll"] = Roll;
-          jsonobject["Frekuensi"] = Frekuensi;
-          jsonobject["Unixtime"] = xUnixtime;
-          JsonObject jsonobject1 = jsonarray.createNestedObject();
-          jsonobject1["NodeID"] = iNodeID_5;
-          jsonobject1["usX"] = usX;
-          jsonobject1["usY"] = usY;
-          jsonobject1["usZ"] = usZ;
-          jsonobject1["Unixtime"] = yUnixtime;
-          JsonObject jsonobject2 = jsonarray.createNestedObject();
-          jsonobject2["NodeID"] = iNodeID_4;
-          jsonobject2["TofX"] = TofX;
-          jsonobject2["TofY"] = TofY;
-          jsonobject2["TofZ"] = TofZ;
-          jsonobject2["Unixtime"] = zUnixtime;
-          JsonObject jsonobject3 = jsonarray.createNestedObject();
-          jsonobject3["NodeID"] = node_asal;
-          jsonobject3["Suhu"] = suhu;
-          jsonobject3["Kelembapan"] = kelembapan;
-          jsonobject3["Unixtime"] = now.unixtime();
-          JsonObject jsonobject4 = jsonarray.createNestedObject();
-          jsonobject4["NodeID"] = 2;
-          jsonobject4["Berat"] = NULL;
-          jsonobject4["Unixtime"] = NULL;
-          datakirim = "";
-          serializeJson(doc, datakirim);
-          char kirim_loop[datakirim.length() + 1];
-          datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-            if (!mesh.checkConnection()) {
-              do {
-                Serial.println(F("Reconnecting to mesh network..."));
-              } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-            } else {
-              Serial.println(F("Send fail, Test OK"));
-            }
-          }
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 4 && jumlahnode[1] == 2 && jumlahnode[2] == 3){
-        JsonObject NodeID_4 = doc[0];
-        int kNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t adUnixtime = NodeID_4["Unixtime"];
-        JsonObject NodeID_2 = doc[1];
-        int kNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t aeUnixtime = NodeID_2["Unixtime"];
-        JsonObject NodeID_3 = doc[2];
-        int kNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t afUnixtime = NodeID_3["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = kNodeID_4;
-        jsonobject["TofX"] = TofX;
-        jsonobject["TofY"] = TofY;
-        jsonobject["TofZ"] = TofZ;
-        jsonobject["Unixtime"] = adUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = kNodeID_2;
-        jsonobject1["Berat"] = Berat;
-        jsonobject1["Unixtime"] = aeUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = kNodeID_3;
-        jsonobject2["Pitch"] = Pitch;
-        jsonobject2["Roll"] = Roll;
-        jsonobject2["Frekuensi"] = Frekuensi;
-        jsonobject2["Unixtime"] = afUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = node_asal;
-        jsonobject3["Suhu"] = suhu;
-        jsonobject3["Kelembapan"] = kelembapan;
-        jsonobject3["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-          JsonArray jsonarray = doc.to<JsonArray>();
-          JsonObject jsonobject = jsonarray.createNestedObject();
-          jsonobject["NodeID"] = kNodeID_4;
-          jsonobject["TofX"] = TofX;
-          jsonobject["TofY"] = TofY;
-          jsonobject["TofZ"] = TofZ;
-          jsonobject["Unixtime"] = adUnixtime;
-          JsonObject jsonobject1 = jsonarray.createNestedObject();
-          jsonobject1["NodeID"] = kNodeID_2;
-          jsonobject1["Berat"] = Berat;
-          jsonobject1["Unixtime"] = aeUnixtime;
-          JsonObject jsonobject2 = jsonarray.createNestedObject();
-          jsonobject2["NodeID"] = kNodeID_3;
-          jsonobject2["Pitch"] = Pitch;
-          jsonobject2["Roll"] = Roll;
-          jsonobject2["Frekuensi"] = Frekuensi;
-          jsonobject2["Unixtime"] = afUnixtime;
-          JsonObject jsonobject3 = jsonarray.createNestedObject();
-          jsonobject3["NodeID"] = node_asal;
-          jsonobject3["Suhu"] = suhu;
-          jsonobject3["Kelembapan"] = kelembapan;
-          jsonobject3["Unixtime"] = now.unixtime();
-          JsonObject jsonobject4 = jsonarray.createNestedObject();
-          jsonobject4["NodeID"] = 5;
-          jsonobject4["usX"] = NULL;
-          jsonobject4["usY"] = NULL;
-          jsonobject4["usZ"] = NULL;
-          jsonobject4["Unixtime"] = NULL;
-          datakirim = "";
-          serializeJson(doc, datakirim);
-          char kirim_loop[datakirim.length() + 1];
-          datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-            if (!mesh.checkConnection()) {
-              do {
-                Serial.println(F("Reconnecting to mesh network..."));
-              } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-            } else {
-              Serial.println(F("Send fail, Test OK"));
-            }
-          }
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 4 && jumlahnode[1] == 2 && jumlahnode[2] == 5){
-        JsonObject NodeID_4 = doc[0];
-        int kNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t adUnixtime = NodeID_4["Unixtime"];
-        JsonObject NodeID_2 = doc[1];
-        int kNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t aeUnixtime = NodeID_2["Unixtime"];
-        JsonObject NodeID_5 = doc[2];
-        int kNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t afUnixtime = NodeID_5["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = kNodeID_4;
-        jsonobject["TofX"] = TofX;
-        jsonobject["TofY"] = TofY;
-        jsonobject["TofZ"] = TofZ;
-        jsonobject["Unixtime"] = adUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = kNodeID_2;
-        jsonobject1["Berat"] = Berat;
-        jsonobject1["Unixtime"] = aeUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = kNodeID_5;
-        jsonobject2["usX"] = usX;
-        jsonobject2["usY"] = usY;
-        jsonobject2["usZ"] = usZ;
-        jsonobject2["Unixtime"] = afUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = node_asal;
-        jsonobject3["Suhu"] = suhu;
-        jsonobject3["Kelembapan"] = kelembapan;
-        jsonobject3["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-          JsonArray jsonarray = doc.to<JsonArray>();
-          JsonObject jsonobject = jsonarray.createNestedObject();
-          jsonobject["NodeID"] = kNodeID_4;
-          jsonobject["TofX"] = TofX;
-          jsonobject["TofY"] = TofY;
-          jsonobject["TofZ"] = TofZ;
-          jsonobject["Unixtime"] = adUnixtime;
-          JsonObject jsonobject1 = jsonarray.createNestedObject();
-          jsonobject1["NodeID"] = kNodeID_2;
-          jsonobject1["Berat"] = Berat;
-          jsonobject1["Unixtime"] = aeUnixtime;
-          JsonObject jsonobject2 = jsonarray.createNestedObject();
-          jsonobject2["NodeID"] = kNodeID_5;
-          jsonobject2["usX"] = usX;
-          jsonobject2["usY"] = usY;
-          jsonobject2["usZ"] = usZ;
-          jsonobject2["Unixtime"] = afUnixtime;
-          JsonObject jsonobject3 = jsonarray.createNestedObject();
-          jsonobject3["NodeID"] = node_asal;
-          jsonobject3["Suhu"] = suhu;
-          jsonobject3["Kelembapan"] = kelembapan;
-          jsonobject3["Unixtime"] = now.unixtime();
-          JsonObject jsonobject4 = jsonarray.createNestedObject();
-          jsonobject4["NodeID"] = 3;
-          jsonobject4["Pitch"] = NULL;
-          jsonobject4["Roll"] = NULL;
-          jsonobject4["Frekuensi"] = NULL;
-          jsonobject4["Unixtime"] = NULL;
-          datakirim = "";
-          serializeJson(doc, datakirim);
-          char kirim_loop[datakirim.length() + 1];
-          datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-            if (!mesh.checkConnection()) {
-              do {
-                Serial.println(F("Reconnecting to mesh network..."));
-              } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-            } else {
-              Serial.println(F("Send fail, Test OK"));
-            }
-          }
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 4 && jumlahnode[1] == 3 && jumlahnode[2] == 2){
-        JsonObject NodeID_4 = doc[0];
-        int jNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t aaUnixtime = NodeID_4["Unixtime"];
-        JsonObject NodeID_3 = doc[1];
-        int jNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t abUnixtime = NodeID_3["Unixtime"];
-        JsonObject NodeID_2 = doc[2];
-        int jNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t acUnixtime = NodeID_2["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = jNodeID_4;
-        jsonobject["TofX"] = TofX;
-        jsonobject["TofY"] = TofY;
-        jsonobject["TofZ"] = TofZ;
-        jsonobject["Unixtime"] = aaUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = jNodeID_3;
-        jsonobject1["Pitch"] = Pitch;
-        jsonobject1["Roll"] = Roll;
-        jsonobject1["Frekuensi"] = Frekuensi;
-        jsonobject1["Unixtime"] = abUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = jNodeID_2;
-        jsonobject2["Berat"] = Berat;
-        jsonobject2["Unixtime"] = acUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = node_asal;
-        jsonobject3["Suhu"] = suhu;
-        jsonobject3["Kelembapan"] = kelembapan;
-        jsonobject3["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_5)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE 5"));
-          JsonArray jsonarray = doc.to<JsonArray>();
-          JsonObject jsonobject = jsonarray.createNestedObject();
-          jsonobject["NodeID"] = jNodeID_4;
-          jsonobject["TofX"] = TofX;
-          jsonobject["TofY"] = TofY;
-          jsonobject["TofZ"] = TofZ;
-          jsonobject["Unixtime"] = aaUnixtime;
-          JsonObject jsonobject1 = jsonarray.createNestedObject();
-          jsonobject1["NodeID"] = jNodeID_3;
-          jsonobject1["Pitch"] = Pitch;
-          jsonobject1["Roll"] = Roll;
-          jsonobject1["Frekuensi"] = Frekuensi;
-          jsonobject1["Unixtime"] = abUnixtime;
-          JsonObject jsonobject2 = jsonarray.createNestedObject();
-          jsonobject2["NodeID"] = jNodeID_2;
-          jsonobject2["Berat"] = Berat;
-          jsonobject2["Unixtime"] = acUnixtime;
-          JsonObject jsonobject3 = jsonarray.createNestedObject();
-          jsonobject3["NodeID"] = node_asal;
-          jsonobject3["Suhu"] = suhu;
-          jsonobject3["Kelembapan"] = kelembapan;
-          jsonobject3["Unixtime"] = now.unixtime();
-          JsonObject jsonobject4 = jsonarray.createNestedObject();
-          jsonobject4["NodeID"] = 5;
-          jsonobject4["usX"] = NULL;
-          jsonobject4["usY"] = NULL;
-          jsonobject4["usZ"] = NULL;
-          jsonobject4["Unixtime"] = NULL;
-          datakirim = "";
-          serializeJson(doc, datakirim);
-          char kirim_loop[datakirim.length() + 1];
-          datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-            if (!mesh.checkConnection()) {
-              do {
-                Serial.println(F("Reconnecting to mesh network..."));
-              } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-            } else {
-              Serial.println(F("Send fail, Test OK"));
-            }
-          }
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 4 && jumlahnode[1] == 3 && jumlahnode[2] == 5){
-        JsonObject NodeID_4 = doc[0];
-        int jNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t aaUnixtime = NodeID_4["Unixtime"];
-        JsonObject NodeID_3 = doc[1];
-        int jNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t abUnixtime = NodeID_3["Unixtime"];
-        JsonObject NodeID_5 = doc[2];
-        int jNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t acUnixtime = NodeID_5["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = jNodeID_4;
-        jsonobject["TofX"] = TofX;
-        jsonobject["TofY"] = TofY;
-        jsonobject["TofZ"] = TofZ;
-        jsonobject["Unixtime"] = aaUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = jNodeID_3;
-        jsonobject1["Pitch"] = Pitch;
-        jsonobject1["Roll"] = Roll;
-        jsonobject1["Frekuensi"] = Frekuensi;
-        jsonobject1["Unixtime"] = abUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = jNodeID_5;
-        jsonobject2["usX"] = usX;
-        jsonobject2["usY"] = usY;
-        jsonobject2["usZ"] = usZ;
-        jsonobject2["Unixtime"] = acUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = node_asal;
-        jsonobject3["Suhu"] = suhu;
-        jsonobject3["Kelembapan"] = kelembapan;
-        jsonobject3["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-          JsonArray jsonarray = doc.to<JsonArray>();
-          JsonObject jsonobject = jsonarray.createNestedObject();
-          jsonobject["NodeID"] = jNodeID_4;
-          jsonobject["TofX"] = TofX;
-          jsonobject["TofY"] = TofY;
-          jsonobject["TofZ"] = TofZ;
-          jsonobject["Unixtime"] = aaUnixtime;
-          JsonObject jsonobject1 = jsonarray.createNestedObject();
-          jsonobject1["NodeID"] = jNodeID_3;
-          jsonobject1["Pitch"] = Pitch;
-          jsonobject1["Roll"] = Roll;
-          jsonobject1["Frekuensi"] = Frekuensi;
-          jsonobject1["Unixtime"] = abUnixtime;
-          JsonObject jsonobject2 = jsonarray.createNestedObject();
-          jsonobject2["NodeID"] = jNodeID_5;
-          jsonobject2["usX"] = usX;
-          jsonobject2["usY"] = usY;
-          jsonobject2["usZ"] = usZ;
-          jsonobject2["Unixtime"] = acUnixtime;
-          JsonObject jsonobject3 = jsonarray.createNestedObject();
-          jsonobject3["NodeID"] = node_asal;
-          jsonobject3["Suhu"] = suhu;
-          jsonobject3["Kelembapan"] = kelembapan;
-          jsonobject3["Unixtime"] = now.unixtime();
-          JsonObject jsonobject4 = jsonarray.createNestedObject();
-          jsonobject4["NodeID"] = 2;
-          jsonobject4["Berat"] = NULL;
-          jsonobject4["Unixtime"] = NULL;
-          datakirim = "";
-          serializeJson(doc, datakirim);
-          char kirim_loop[datakirim.length() + 1];
-          datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-            if (!mesh.checkConnection()) {
-              do {
-                Serial.println(F("Reconnecting to mesh network..."));
-              } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-            } else {
-              Serial.println(F("Send fail, Test OK"));
-            }
-          }
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 4 && jumlahnode[1] == 5 && jumlahnode[2] == 2){
-        JsonObject NodeID_4 = doc[0];
-        int jNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t aaUnixtime = NodeID_4["Unixtime"];
-        JsonObject NodeID_5 = doc[1];
-        int jNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t abUnixtime = NodeID_5["Unixtime"];
-        JsonObject NodeID_2 = doc[2];
-        int jNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t acUnixtime = NodeID_2["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = jNodeID_4;
-        jsonobject["TofX"] = TofX;
-        jsonobject["TofY"] = TofY;
-        jsonobject["TofZ"] = TofZ;
-        jsonobject["Unixtime"] = aaUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = jNodeID_5;
-        jsonobject1["usX"] = usX;
-        jsonobject1["usY"] = usY;
-        jsonobject1["usZ"] = usZ;
-        jsonobject1["Unixtime"] = abUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = jNodeID_2;
-        jsonobject2["Berat"] = Berat;
-        jsonobject2["Unixtime"] = acUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = node_asal;
-        jsonobject3["Suhu"] = suhu;
-        jsonobject3["Kelembapan"] = kelembapan;
-        jsonobject3["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-          JsonArray jsonarray = doc.to<JsonArray>();
-          JsonObject jsonobject = jsonarray.createNestedObject();
-          jsonobject["NodeID"] = jNodeID_4;
-          jsonobject["TofX"] = TofX;
-          jsonobject["TofY"] = TofY;
-          jsonobject["TofZ"] = TofZ;
-          jsonobject["Unixtime"] = aaUnixtime;
-          JsonObject jsonobject1 = jsonarray.createNestedObject();
-          jsonobject1["NodeID"] = jNodeID_5;
-          jsonobject1["usX"] = usX;
-          jsonobject1["usY"] = usY;
-          jsonobject1["usZ"] = usZ;
-          jsonobject1["Unixtime"] = abUnixtime;
-          JsonObject jsonobject2 = jsonarray.createNestedObject();
-          jsonobject2["NodeID"] = jNodeID_2;
-          jsonobject2["Berat"] = Berat;
-          jsonobject2["Unixtime"] = acUnixtime;
-          JsonObject jsonobject3 = jsonarray.createNestedObject();
-          jsonobject3["NodeID"] = node_asal;
-          jsonobject3["Suhu"] = suhu;
-          jsonobject3["Kelembapan"] = kelembapan;
-          jsonobject3["Unixtime"] = now.unixtime();
-          JsonObject jsonobject4 = jsonarray.createNestedObject();
-          jsonobject4["NodeID"] = 3;
-          jsonobject4["Pitch"] = NULL;
-          jsonobject4["Roll"] = NULL;
-          jsonobject4["Frekuensi"] = NULL;
-          jsonobject4["Unixtime"] = NULL;
-          datakirim = "";
-          serializeJson(doc, datakirim);
-          char kirim_loop[datakirim.length() + 1];
-          datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-            if (!mesh.checkConnection()) {
-              do {
-                Serial.println(F("Reconnecting to mesh network..."));
-              } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-            } else {
-              Serial.println(F("Send fail, Test OK"));
-            }
-          }
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 4 && jumlahnode[1] == 5 && jumlahnode[2] == 3){
-        JsonObject NodeID_4 = doc[0];
-        int jNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t aaUnixtime = NodeID_4["Unixtime"];
-        JsonObject NodeID_5 = doc[1];
-        int jNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t abUnixtime = NodeID_5["Unixtime"];
-        JsonObject NodeID_3 = doc[2];
-        int jNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t acUnixtime = NodeID_3["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = jNodeID_4;
-        jsonobject["TofX"] = TofX;
-        jsonobject["TofY"] = TofY;
-        jsonobject["TofZ"] = TofZ;
-        jsonobject["Unixtime"] = aaUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = jNodeID_5;
-        jsonobject1["usX"] = usX;
-        jsonobject1["usY"] = usY;
-        jsonobject1["usZ"] = usZ;
-        jsonobject1["Unixtime"] = abUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = jNodeID_3;
-        jsonobject2["Pitch"] = Pitch;
-        jsonobject2["Roll"] = Roll;
-        jsonobject2["Frekuensi"] = Frekuensi;
-        jsonobject2["Unixtime"] = acUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = node_asal;
-        jsonobject3["Suhu"] = suhu;
-        jsonobject3["Kelembapan"] = kelembapan;
-        jsonobject3["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-          JsonArray jsonarray = doc.to<JsonArray>();
-          JsonObject jsonobject = jsonarray.createNestedObject();
-          jsonobject["NodeID"] = jNodeID_4;
-          jsonobject["TofX"] = TofX;
-          jsonobject["TofY"] = TofY;
-          jsonobject["TofZ"] = TofZ;
-          jsonobject["Unixtime"] = aaUnixtime;
-          JsonObject jsonobject1 = jsonarray.createNestedObject();
-          jsonobject1["NodeID"] = jNodeID_5;
-          jsonobject1["usX"] = usX;
-          jsonobject1["usY"] = usY;
-          jsonobject1["usZ"] = usZ;
-          jsonobject1["Unixtime"] = abUnixtime;
-          JsonObject jsonobject2 = jsonarray.createNestedObject();
-          jsonobject2["NodeID"] = jNodeID_3;
-          jsonobject2["Pitch"] = Pitch;
-          jsonobject2["Roll"] = Roll;
-          jsonobject2["Frekuensi"] = Frekuensi;
-          jsonobject2["Unixtime"] = acUnixtime;
-          JsonObject jsonobject3 = jsonarray.createNestedObject();
-          jsonobject3["NodeID"] = node_asal;
-          jsonobject3["Suhu"] = suhu;
-          jsonobject3["Kelembapan"] = kelembapan;
-          jsonobject3["Unixtime"] = now.unixtime();
-          JsonObject jsonobject4 = jsonarray.createNestedObject();
-          jsonobject4["NodeID"] = 2;
-          jsonobject4["Berat"] = NULL;
-          jsonobject4["Unixtime"] = NULL;
-          datakirim = "";
-          serializeJson(doc, datakirim);
-          char kirim_loop[datakirim.length() + 1];
-          datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-            if (!mesh.checkConnection()) {
-              do {
-                Serial.println(F("Reconnecting to mesh network..."));
-              } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-            } else {
-              Serial.println(F("Send fail, Test OK"));
-            }
-          }
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 5 && jumlahnode[1] == 2 && jumlahnode[2] == 3){
-        JsonObject NodeID_5 = doc[0];
-        int kNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t adUnixtime = NodeID_5["Unixtime"];
-        JsonObject NodeID_2 = doc[1];
-        int kNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t aeUnixtime = NodeID_2["Unixtime"];
-        JsonObject NodeID_3 = doc[2];
-        int kNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t afUnixtime = NodeID_3["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = kNodeID_5;
-        jsonobject["usX"] = usX;
-        jsonobject["usY"] = usY;
-        jsonobject["usZ"] = usZ;
-        jsonobject["Unixtime"] = adUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = kNodeID_2;
-        jsonobject1["Berat"] = Berat;
-        jsonobject1["Unixtime"] = aeUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = kNodeID_3;
-        jsonobject2["Pitch"] = Pitch;
-        jsonobject2["Roll"] = Roll;
-        jsonobject2["Frekuensi"] = Frekuensi;
-        jsonobject2["Unixtime"] = afUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = node_asal;
-        jsonobject3["Suhu"] = suhu;
-        jsonobject3["Kelembapan"] = kelembapan;
-        jsonobject3["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-          JsonArray jsonarray = doc.to<JsonArray>();
-          JsonObject jsonobject = jsonarray.createNestedObject();
-          jsonobject["NodeID"] = kNodeID_5;
-          jsonobject["usX"] = usX;
-          jsonobject["usY"] = usY;
-          jsonobject["usZ"] = usZ;
-          jsonobject["Unixtime"] = adUnixtime;
-          JsonObject jsonobject1 = jsonarray.createNestedObject();
-          jsonobject1["NodeID"] = kNodeID_2;
-          jsonobject1["Berat"] = Berat;
-          jsonobject1["Unixtime"] = aeUnixtime;
-          JsonObject jsonobject2 = jsonarray.createNestedObject();
-          jsonobject2["NodeID"] = kNodeID_3;
-          jsonobject2["Pitch"] = Pitch;
-          jsonobject2["Roll"] = Roll;
-          jsonobject2["Frekuensi"] = Frekuensi;
-          jsonobject2["Unixtime"] = afUnixtime;
-          JsonObject jsonobject3 = jsonarray.createNestedObject();
-          jsonobject3["NodeID"] = node_asal;
-          jsonobject3["Suhu"] = suhu;
-          jsonobject3["Kelembapan"] = kelembapan;
-          jsonobject3["Unixtime"] = now.unixtime();
-          JsonObject jsonobject4 = jsonarray.createNestedObject();
-          jsonobject4["NodeID"] = 4;
-          jsonobject4["TofX"] = NULL;
-          jsonobject4["TofY"] = NULL;
-          jsonobject4["TofZ"] = NULL;
-          jsonobject4["Unixtime"] = NULL;
-          datakirim = "";
-          serializeJson(doc, datakirim);
-          char kirim_loop[datakirim.length() + 1];
-          datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-            if (!mesh.checkConnection()) {
-              do {
-                Serial.println(F("Reconnecting to mesh network..."));
-              } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-            } else {
-              Serial.println(F("Send fail, Test OK"));
-            }
-          }
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 5 && jumlahnode[1] == 2 && jumlahnode[2] == 4){
-        JsonObject NodeID_5 = doc[0];
-        int kNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t adUnixtime = NodeID_5["Unixtime"];
-        JsonObject NodeID_2 = doc[1];
-        int kNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t aeUnixtime = NodeID_2["Unixtime"];
-        JsonObject NodeID_4 = doc[2];
-        int kNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t afUnixtime = NodeID_4["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = kNodeID_5;
-        jsonobject["usX"] = usX;
-        jsonobject["usY"] = usY;
-        jsonobject["usZ"] = usZ;
-        jsonobject["Unixtime"] = adUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = kNodeID_2;
-        jsonobject1["Berat"] = Berat;
-        jsonobject1["Unixtime"] = aeUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = kNodeID_4;
-        jsonobject2["TofX"] = TofX;
-        jsonobject2["TofY"] = TofY;
-        jsonobject2["TofZ"] = TofZ;
-        jsonobject2["Unixtime"] = afUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = node_asal;
-        jsonobject3["Suhu"] = suhu;
-        jsonobject3["Kelembapan"] = kelembapan;
-        jsonobject3["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-          JsonArray jsonarray = doc.to<JsonArray>();
-          JsonObject jsonobject = jsonarray.createNestedObject();
-          jsonobject["NodeID"] = kNodeID_5;
-          jsonobject["usX"] = usX;
-          jsonobject["usY"] = usY;
-          jsonobject["usZ"] = usZ;
-          jsonobject["Unixtime"] = adUnixtime;
-          JsonObject jsonobject1 = jsonarray.createNestedObject();
-          jsonobject1["NodeID"] = kNodeID_2;
-          jsonobject1["Berat"] = Berat;
-          jsonobject1["Unixtime"] = aeUnixtime;
-          JsonObject jsonobject2 = jsonarray.createNestedObject();
-          jsonobject2["NodeID"] = kNodeID_4;
-          jsonobject2["TofX"] = TofX;
-          jsonobject2["TofY"] = TofY;
-          jsonobject2["TofZ"] = TofZ;
-          jsonobject2["Unixtime"] = afUnixtime;
-          JsonObject jsonobject3 = jsonarray.createNestedObject();
-          jsonobject3["NodeID"] = node_asal;
-          jsonobject3["Suhu"] = suhu;
-          jsonobject3["Kelembapan"] = kelembapan;
-          jsonobject3["Unixtime"] = now.unixtime();
-          JsonObject jsonobject4 = jsonarray.createNestedObject();
-          jsonobject4["NodeID"] = 3;
-          jsonobject4["Pitch"] = NULL;
-          jsonobject4["Roll"] = NULL;
-          jsonobject4["Frekuensi"] = NULL;
-          jsonobject4["Unixtime"] = NULL;
-          datakirim = "";
-          serializeJson(doc, datakirim);
-          char kirim_loop[datakirim.length() + 1];
-          datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-            if (!mesh.checkConnection()) {
-              do {
-                Serial.println(F("Reconnecting to mesh network..."));
-              } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-            } else {
-              Serial.println(F("Send fail, Test OK"));
-            }
-          }
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 5 && jumlahnode[1] == 3 && jumlahnode[2] == 2){
-        JsonObject NodeID_5 = doc[0];
-        int jNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t aaUnixtime = NodeID_5["Unixtime"];
-        JsonObject NodeID_3 = doc[1];
-        int jNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t abUnixtime = NodeID_3["Unixtime"];
-        JsonObject NodeID_2 = doc[2];
-        int jNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t acUnixtime = NodeID_2["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = jNodeID_5;
-        jsonobject["usX"] = usX;
-        jsonobject["usY"] = usY;
-        jsonobject["usZ"] = usZ;
-        jsonobject["Unixtime"] = aaUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = jNodeID_3;
-        jsonobject1["Pitch"] = Pitch;
-        jsonobject1["Roll"] = Roll;
-        jsonobject1["Frekuensi"] = Frekuensi;
-        jsonobject1["Unixtime"] = abUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = jNodeID_2;
-        jsonobject2["Berat"] = Berat;
-        jsonobject2["Unixtime"] = acUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = node_asal;
-        jsonobject3["Suhu"] = suhu;
-        jsonobject3["Kelembapan"] = kelembapan;
-        jsonobject3["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_4)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE 4"));
-          JsonArray jsonarray = doc.to<JsonArray>();
-          JsonObject jsonobject = jsonarray.createNestedObject();
-          jsonobject["NodeID"] = jNodeID_5;
-          jsonobject["usX"] = usX;
-          jsonobject["usY"] = usY;
-          jsonobject["usZ"] = usZ;
-          jsonobject["Unixtime"] = aaUnixtime;
-          JsonObject jsonobject1 = jsonarray.createNestedObject();
-          jsonobject1["NodeID"] = jNodeID_3;
-          jsonobject1["Pitch"] = Pitch;
-          jsonobject1["Roll"] = Roll;
-          jsonobject1["Frekuensi"] = Frekuensi;
-          jsonobject1["Unixtime"] = abUnixtime;
-          JsonObject jsonobject2 = jsonarray.createNestedObject();
-          jsonobject2["NodeID"] = jNodeID_2;
-          jsonobject2["Berat"] = Berat;
-          jsonobject2["Unixtime"] = acUnixtime;
-          JsonObject jsonobject3 = jsonarray.createNestedObject();
-          jsonobject3["NodeID"] = node_asal;
-          jsonobject3["Suhu"] = suhu;
-          jsonobject3["Kelembapan"] = kelembapan;
-          jsonobject3["Unixtime"] = now.unixtime();
-          JsonObject jsonobject4 = jsonarray.createNestedObject();
-          jsonobject4["NodeID"] = 4;
-          jsonobject4["TofX"] = NULL;
-          jsonobject4["TofY"] = NULL;
-          jsonobject4["TofZ"] = NULL;
-          jsonobject4["Unixtime"] = NULL;
-          datakirim = "";
-          serializeJson(doc, datakirim);
-          char kirim_loop[datakirim.length() + 1];
-          datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-            if (!mesh.checkConnection()) {
-              do {
-                Serial.println(F("Reconnecting to mesh network..."));
-              } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-            } else {
-              Serial.println(F("Send fail, Test OK"));
-            }
-          }
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 5 && jumlahnode[1] == 3 && jumlahnode[2] == 4){
-        JsonObject NodeID_5 = doc[0];
-        int jNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t aaUnixtime = NodeID_5["Unixtime"];
-        JsonObject NodeID_3 = doc[1];
-        int jNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t abUnixtime = NodeID_3["Unixtime"];
-        JsonObject NodeID_4 = doc[2];
-        int jNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t acUnixtime = NodeID_4["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = jNodeID_5;
-        jsonobject["usX"] = usX;
-        jsonobject["usY"] = usY;
-        jsonobject["usZ"] = usZ;
-        jsonobject["Unixtime"] = aaUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = jNodeID_3;
-        jsonobject1["Pitch"] = Pitch;
-        jsonobject1["Roll"] = Roll;
-        jsonobject1["Frekuensi"] = Frekuensi;
-        jsonobject1["Unixtime"] = abUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = jNodeID_4;
-        jsonobject2["TofX"] = TofX;
-        jsonobject2["TofY"] = TofY;
-        jsonobject2["TofZ"] = TofZ;
-        jsonobject2["Unixtime"] = acUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = node_asal;
-        jsonobject3["Suhu"] = suhu;
-        jsonobject3["Kelembapan"] = kelembapan;
-        jsonobject3["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-          JsonArray jsonarray = doc.to<JsonArray>();
-          JsonObject jsonobject = jsonarray.createNestedObject();
-          jsonobject["NodeID"] = jNodeID_5;
-          jsonobject["usX"] = usX;
-          jsonobject["usY"] = usY;
-          jsonobject["usZ"] = usZ;
-          jsonobject["Unixtime"] = aaUnixtime;
-          JsonObject jsonobject1 = jsonarray.createNestedObject();
-          jsonobject1["NodeID"] = jNodeID_3;
-          jsonobject1["Pitch"] = Pitch;
-          jsonobject1["Roll"] = Roll;
-          jsonobject1["Frekuensi"] = Frekuensi;
-          jsonobject1["Unixtime"] = abUnixtime;
-          JsonObject jsonobject2 = jsonarray.createNestedObject();
-          jsonobject2["NodeID"] = jNodeID_4;
-          jsonobject2["TofX"] = TofX;
-          jsonobject2["TofY"] = TofY;
-          jsonobject2["TofZ"] = TofZ;
-          jsonobject2["Unixtime"] = acUnixtime;
-          JsonObject jsonobject3 = jsonarray.createNestedObject();
-          jsonobject3["NodeID"] = node_asal;
-          jsonobject3["Suhu"] = suhu;
-          jsonobject3["Kelembapan"] = kelembapan;
-          jsonobject3["Unixtime"] = now.unixtime();
-          JsonObject jsonobject4 = jsonarray.createNestedObject();
-          jsonobject4["NodeID"] = 2;
-          jsonobject4["Berat"] = NULL;
-          jsonobject4["Unixtime"] = NULL;
-          datakirim = "";
-          serializeJson(doc, datakirim);
-          char kirim_loop[datakirim.length() + 1];
-          datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-            if (!mesh.checkConnection()) {
-              do {
-                Serial.println(F("Reconnecting to mesh network..."));
-              } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-            } else {
-              Serial.println(F("Send fail, Test OK"));
-            }
-          }
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 5 && jumlahnode[1] == 4 && jumlahnode[2] == 2){
-        JsonObject NodeID_5 = doc[0];
-        int jNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t aaUnixtime = NodeID_5["Unixtime"];
-        JsonObject NodeID_4 = doc[1];
-        int jNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t abUnixtime = NodeID_4["Unixtime"];
-        JsonObject NodeID_2 = doc[2];
-        int jNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t acUnixtime = NodeID_2["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = jNodeID_5;
-        jsonobject["usX"] = usX;
-        jsonobject["usY"] = usY;
-        jsonobject["usZ"] = usZ;
-        jsonobject["Unixtime"] = aaUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = jNodeID_4;
-        jsonobject1["TofX"] = TofX;
-        jsonobject1["TofY"] = TofY;
-        jsonobject1["TofZ"] = TofZ;
-        jsonobject1["Unixtime"] = abUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = jNodeID_2;
-        jsonobject2["Berat"] = Berat;
-        jsonobject2["Unixtime"] = acUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = node_asal;
-        jsonobject3["Suhu"] = suhu;
-        jsonobject3["Kelembapan"] = kelembapan;
-        jsonobject3["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_3)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE 3"));
-          JsonArray jsonarray = doc.to<JsonArray>();
-          JsonObject jsonobject = jsonarray.createNestedObject();
-          jsonobject["NodeID"] = jNodeID_5;
-          jsonobject["usX"] = usX;
-          jsonobject["usY"] = usY;
-          jsonobject["usZ"] = usZ;
-          jsonobject["Unixtime"] = aaUnixtime;
-          JsonObject jsonobject1 = jsonarray.createNestedObject();
-          jsonobject1["NodeID"] = jNodeID_4;
-          jsonobject1["TofX"] = TofX;
-          jsonobject1["TofY"] = TofY;
-          jsonobject1["TofZ"] = TofZ;
-          jsonobject1["Unixtime"] = abUnixtime;
-          JsonObject jsonobject2 = jsonarray.createNestedObject();
-          jsonobject2["NodeID"] = jNodeID_2;
-          jsonobject2["Berat"] = Berat;
-          jsonobject2["Unixtime"] = acUnixtime;
-          JsonObject jsonobject3 = jsonarray.createNestedObject();
-          jsonobject3["NodeID"] = node_asal;
-          jsonobject3["Suhu"] = suhu;
-          jsonobject3["Kelembapan"] = kelembapan;
-          jsonobject3["Unixtime"] = now.unixtime();
-          JsonObject jsonobject4 = jsonarray.createNestedObject();
-          jsonobject4["NodeID"] = 3;
-          jsonobject4["Pitch"] = NULL;
-          jsonobject4["Roll"] = NULL;
-          jsonobject4["Frekuensi"] = NULL;
-          jsonobject4["Unixtime"] = NULL;
-          datakirim = "";
-          serializeJson(doc, datakirim);
-          char kirim_loop[datakirim.length() + 1];
-          datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-            if (!mesh.checkConnection()) {
-              do {
-                Serial.println(F("Reconnecting to mesh network..."));
-              } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-            } else {
-              Serial.println(F("Send fail, Test OK"));
-            }
-          }
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 5 && jumlahnode[1] == 4 && jumlahnode[2] == 3){
-        JsonObject NodeID_5 = doc[0];
-        int jNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t aaUnixtime = NodeID_5["Unixtime"];
-        JsonObject NodeID_4 = doc[1];
-        int jNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t abUnixtime = NodeID_4["Unixtime"];
-        JsonObject NodeID_3 = doc[2];
-        int jNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t acUnixtime = NodeID_3["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = jNodeID_5;
-        jsonobject["usX"] = usX;
-        jsonobject["usY"] = usY;
-        jsonobject["usZ"] = usZ;
-        jsonobject["Unixtime"] = aaUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = jNodeID_4;
-        jsonobject1["TofX"] = TofX;
-        jsonobject1["TofY"] = TofY;
-        jsonobject1["TofZ"] = TofZ;
-        jsonobject1["Unixtime"] = abUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = jNodeID_3;
-        jsonobject2["Pitch"] = Pitch;
-        jsonobject2["Roll"] = Roll;
-        jsonobject2["Frekuensi"] = Frekuensi;
-        jsonobject2["Unixtime"] = acUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = node_asal;
-        jsonobject3["Suhu"] = suhu;
-        jsonobject3["Kelembapan"] = kelembapan;
-        jsonobject3["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_2)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE 2"));
-          JsonArray jsonarray = doc.to<JsonArray>();
-          JsonObject jsonobject = jsonarray.createNestedObject();
-          jsonobject["NodeID"] = jNodeID_5;
-          jsonobject["usX"] = usX;
-          jsonobject["usY"] = usY;
-          jsonobject["usZ"] = usZ;
-          jsonobject["Unixtime"] = aaUnixtime;
-          JsonObject jsonobject1 = jsonarray.createNestedObject();
-          jsonobject1["NodeID"] = jNodeID_4;
-          jsonobject1["TofX"] = TofX;
-          jsonobject1["TofY"] = TofY;
-          jsonobject1["TofZ"] = TofZ;
-          jsonobject1["Unixtime"] = abUnixtime;
-          JsonObject jsonobject2 = jsonarray.createNestedObject();
-          jsonobject2["NodeID"] = jNodeID_3;
-          jsonobject2["Pitch"] = Pitch;
-          jsonobject2["Roll"] = Roll;
-          jsonobject2["Frekuensi"] = Frekuensi;
-          jsonobject2["Unixtime"] = acUnixtime;
-          JsonObject jsonobject3 = jsonarray.createNestedObject();
-          jsonobject3["NodeID"] = node_asal;
-          jsonobject3["Suhu"] = suhu;
-          jsonobject3["Kelembapan"] = kelembapan;
-          jsonobject3["Unixtime"] = now.unixtime();
-          JsonObject jsonobject4 = jsonarray.createNestedObject();
-          jsonobject4["NodeID"] = 2;
-          jsonobject4["Berat"] = NULL;
-          jsonobject4["Unixtime"] = NULL;
-          datakirim = "";
-          serializeJson(doc, datakirim);
-          char kirim_loop[datakirim.length() + 1];
-          datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-          if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-            Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-            if (!mesh.checkConnection()) {
-              do {
-                Serial.println(F("Reconnecting to mesh network..."));
-              } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-            } else {
-              Serial.println(F("Send fail, Test OK"));
-            }
+      } else if (NODE_5_RSSI >= NODE_4_RSSI) {
+        paket_pesan pesan = { 231, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_5);
+        bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+        if (!NODE_5) {
+          paket_pesan pesan = { 2315, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+          RF24NetworkHeader header(/*to node*/ NODE_4);
+          bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+          Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+          if (!NODE_4) {
+            paket_pesan pesan = { 23154, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_Master);
+            bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
           }
           digitalWrite(LED_BUILTIN, HIGH);
           delay(100);
@@ -9239,1714 +1456,1108 @@ void loop() {
         digitalWrite(LED_BUILTIN, LOW);
       }
     }
-    //==================================================POSISI NODE KE - 5==================================================  
-    if(count == 4){
-      Serial.print("Received packet from NODE " + jumlahnode[3]);
-      if(jumlahnode[0] == 5 && jumlahnode[1] == 4 && jumlahnode[2] == 3 && jumlahnode[3] == 2){
-        JsonObject NodeID_5 = doc[0];
-        int fNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t rUnixtime = NodeID_5["Unixtime"];
-        JsonObject NodeID_4 = doc[1];
-        int fNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t qUnixtime = NodeID_4["Unixtime"];
-        JsonObject NodeID_3 = doc[2];
-        int fNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t pUnixtime = NodeID_3["Unixtime"];
-        JsonObject NodeID_2 = doc[3];
-        int fNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t oUnixtime = NodeID_2["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = fNodeID_5;
-        jsonobject["usX"] = usX;
-        jsonobject["usY"] = usY;
-        jsonobject["usZ"] = usZ;
-        jsonobject["Unixtime"] = rUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = fNodeID_4;
-        jsonobject1["TofX"] = TofX;
-        jsonobject1["TofY"] = TofY;
-        jsonobject1["TofZ"] = TofZ;
-        jsonobject1["Unixtime"] = qUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = fNodeID_3;
-        jsonobject2["Pitch"] = Pitch;
-        jsonobject2["Roll"] = Roll;
-        jsonobject2["Frekuensi"] = Frekuensi;
-        jsonobject2["Unixtime"] = pUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = fNodeID_2;
-        jsonobject3["Berat"] = Berat;
-        jsonobject3["Unixtime"] = oUnixtime;
-        JsonObject jsonobject4 = jsonarray.createNestedObject();
-        jsonobject4["NodeID"] = node_asal;
-        jsonobject4["Suhu"] = suhu;
-        jsonobject4["Kelembapan"] = kelembapan;
-        jsonobject4["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-          if (!mesh.checkConnection()) {
-            do {
-              Serial.println(F("Reconnecting to mesh network..."));
-            } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-          } else {
-            Serial.println(F("Send fail, Test OK"));
+    if (pesan.ID == 24) {
+      if (NODE_3_RSSI >= NODE_5_RSSI) {
+        paket_pesan pesan = { 241, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_3);
+        bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+        if (!NODE_3) {
+          paket_pesan pesan = { 2413, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+          RF24NetworkHeader header(/*to node*/ NODE_5);
+          bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+          Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+          if (!NODE_5) {
+            paket_pesan pesan = { 24135, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_Master);
+            bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
           }
-        }
-        if(!NODE_Master){
           digitalWrite(LED_BUILTIN, HIGH);
           delay(100);
         }
         digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 5 && jumlahnode[1] == 4 && jumlahnode[2] == 2 && jumlahnode[3] == 3){
-        JsonObject NodeID_5 = doc[0];
-        int fNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t rUnixtime = NodeID_5["Unixtime"];
-        JsonObject NodeID_4 = doc[1];
-        int fNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t qUnixtime = NodeID_4["Unixtime"];
-        JsonObject NodeID_2 = doc[2];
-        int fNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t oUnixtime = NodeID_2["Unixtime"];
-        JsonObject NodeID_3 = doc[3];
-        int fNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t pUnixtime = NodeID_3["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = fNodeID_5;
-        jsonobject["usX"] = usX;
-        jsonobject["usY"] = usY;
-        jsonobject["usZ"] = usZ;
-        jsonobject["Unixtime"] = rUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = fNodeID_4;
-        jsonobject1["TofX"] = TofX;
-        jsonobject1["TofY"] = TofY;
-        jsonobject1["TofZ"] = TofZ;
-        jsonobject1["Unixtime"] = qUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = fNodeID_2;
-        jsonobject2["Berat"] = Berat;
-        jsonobject2["Unixtime"] = oUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = fNodeID_3;
-        jsonobject3["Pitch"] = Pitch;
-        jsonobject3["Roll"] = Roll;
-        jsonobject3["Frekuensi"] = Frekuensi;
-        jsonobject3["Unixtime"] = pUnixtime;
-        JsonObject jsonobject4 = jsonarray.createNestedObject();
-        jsonobject4["NodeID"] = node_asal;
-        jsonobject4["Suhu"] = suhu;
-        jsonobject4["Kelembapan"] = kelembapan;
-        jsonobject4["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-          if (!mesh.checkConnection()) {
-            do {
-              Serial.println(F("Reconnecting to mesh network..."));
-            } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-          } else {
-            Serial.println(F("Send fail, Test OK"));
+      } else if (NODE_5_RSSI >= NODE_3_RSSI) {
+        paket_pesan pesan = { 241, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_5);
+        bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+        if (!NODE_5) {
+          paket_pesan pesan = { 2415, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+          RF24NetworkHeader header(/*to node*/ NODE_3);
+          bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+          Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+          if (!NODE_3) {
+            paket_pesan pesan = { 24153, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_Master);
+            bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
           }
-        }
-        if(!NODE_Master){
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 5 && jumlahnode[1] == 3 && jumlahnode[2] == 4 && jumlahnode[3] == 2){
-        JsonObject NodeID_5 = doc[0];
-        int fNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t rUnixtime = NodeID_5["Unixtime"];
-        JsonObject NodeID_3 = doc[1];
-        int fNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t pUnixtime = NodeID_3["Unixtime"];
-        JsonObject NodeID_4 = doc[2];
-        int fNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t qUnixtime = NodeID_4["Unixtime"];
-        JsonObject NodeID_2 = doc[3];
-        int fNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t oUnixtime = NodeID_2["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = fNodeID_5;
-        jsonobject["usX"] = usX;
-        jsonobject["usY"] = usY;
-        jsonobject["usZ"] = usZ;
-        jsonobject["Unixtime"] = rUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = fNodeID_3;
-        jsonobject1["Pitch"] = Pitch;
-        jsonobject1["Roll"] = Roll;
-        jsonobject1["Frekuensi"] = Frekuensi;
-        jsonobject1["Unixtime"] = pUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = fNodeID_4;
-        jsonobject2["TofX"] = TofX;
-        jsonobject2["TofY"] = TofY;
-        jsonobject2["TofZ"] = TofZ;
-        jsonobject2["Unixtime"] = qUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = fNodeID_2;
-        jsonobject3["Berat"] = Berat;
-        jsonobject3["Unixtime"] = oUnixtime;
-        JsonObject jsonobject4 = jsonarray.createNestedObject();
-        jsonobject4["NodeID"] = node_asal;
-        jsonobject4["Suhu"] = suhu;
-        jsonobject4["Kelembapan"] = kelembapan;
-        jsonobject4["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-          if (!mesh.checkConnection()) {
-            do {
-              Serial.println(F("Reconnecting to mesh network..."));
-            } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-          } else {
-            Serial.println(F("Send fail, Test OK"));
-          }
-        }
-        if(!NODE_Master){
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 5 && jumlahnode[1] == 3 && jumlahnode[2] == 2 && jumlahnode[3] == 4){
-        JsonObject NodeID_5 = doc[0];
-        int fNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t rUnixtime = NodeID_5["Unixtime"];
-        JsonObject NodeID_3 = doc[1];
-        int fNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t pUnixtime = NodeID_3["Unixtime"];
-        JsonObject NodeID_2 = doc[2];
-        int fNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t oUnixtime = NodeID_2["Unixtime"];
-        JsonObject NodeID_4 = doc[3];
-        int fNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t qUnixtime = NodeID_4["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = fNodeID_5;
-        jsonobject["usX"] = usX;
-        jsonobject["usY"] = usY;
-        jsonobject["usZ"] = usZ;
-        jsonobject["Unixtime"] = rUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = fNodeID_3;
-        jsonobject1["Pitch"] = Pitch;
-        jsonobject1["Roll"] = Roll;
-        jsonobject1["Frekuensi"] = Frekuensi;
-        jsonobject1["Unixtime"] = pUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = fNodeID_2;
-        jsonobject2["Berat"] = Berat;
-        jsonobject2["Unixtime"] = oUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = fNodeID_4;
-        jsonobject3["TofX"] = TofX;
-        jsonobject3["TofY"] = TofY;
-        jsonobject3["TofZ"] = TofZ;
-        jsonobject3["Unixtime"] = qUnixtime;
-        JsonObject jsonobject4 = jsonarray.createNestedObject();
-        jsonobject4["NodeID"] = node_asal;
-        jsonobject4["Suhu"] = suhu;
-        jsonobject4["Kelembapan"] = kelembapan;
-        jsonobject4["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-          if (!mesh.checkConnection()) {
-            do {
-              Serial.println(F("Reconnecting to mesh network..."));
-            } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-          } else {
-            Serial.println(F("Send fail, Test OK"));
-          }
-        }
-        if(!NODE_Master){
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 5 && jumlahnode[1] == 2 && jumlahnode[2] == 4 && jumlahnode[3] == 3){
-        JsonObject NodeID_5 = doc[0];
-        int fNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t rUnixtime = NodeID_5["Unixtime"];
-        JsonObject NodeID_2 = doc[1];
-        int fNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t oUnixtime = NodeID_2["Unixtime"];
-        JsonObject NodeID_4 = doc[2];
-        int fNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t qUnixtime = NodeID_4["Unixtime"];
-        JsonObject NodeID_3 = doc[3];
-        int fNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t pUnixtime = NodeID_3["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = fNodeID_5;
-        jsonobject["usX"] = usX;
-        jsonobject["usY"] = usY;
-        jsonobject["usZ"] = usZ;
-        jsonobject["Unixtime"] = rUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = fNodeID_2;
-        jsonobject1["Berat"] = Berat;
-        jsonobject1["Unixtime"] = oUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = fNodeID_4;
-        jsonobject2["TofX"] = TofX;
-        jsonobject2["TofY"] = TofY;
-        jsonobject2["TofZ"] = TofZ;
-        jsonobject2["Unixtime"] = qUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = fNodeID_3;
-        jsonobject3["Pitch"] = Pitch;
-        jsonobject3["Roll"] = Roll;
-        jsonobject3["Frekuensi"] = Frekuensi;
-        jsonobject3["Unixtime"] = pUnixtime;
-        JsonObject jsonobject4 = jsonarray.createNestedObject();
-        jsonobject4["NodeID"] = node_asal;
-        jsonobject4["Suhu"] = suhu;
-        jsonobject4["Kelembapan"] = kelembapan;
-        jsonobject4["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-          if (!mesh.checkConnection()) {
-            do {
-              Serial.println(F("Reconnecting to mesh network..."));
-            } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-          } else {
-            Serial.println(F("Send fail, Test OK"));
-          }
-        }
-        if(!NODE_Master){
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 5 && jumlahnode[1] == 2 && jumlahnode[2] == 3 && jumlahnode[3] == 4){
-        JsonObject NodeID_5 = doc[0];
-        int fNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t rUnixtime = NodeID_5["Unixtime"];
-        JsonObject NodeID_2 = doc[1];
-        int fNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t oUnixtime = NodeID_2["Unixtime"];
-        JsonObject NodeID_3 = doc[2];
-        int fNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t pUnixtime = NodeID_3["Unixtime"];
-        JsonObject NodeID_4 = doc[3];
-        int fNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t qUnixtime = NodeID_4["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = fNodeID_5;
-        jsonobject["usX"] = usX;
-        jsonobject["usY"] = usY;
-        jsonobject["usZ"] = usZ;
-        jsonobject["Unixtime"] = rUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = fNodeID_2;
-        jsonobject1["Berat"] = Berat;
-        jsonobject1["Unixtime"] = oUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = fNodeID_3;
-        jsonobject2["Pitch"] = Pitch;
-        jsonobject2["Roll"] = Roll;
-        jsonobject2["Frekuensi"] = Frekuensi;
-        jsonobject2["Unixtime"] = pUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = fNodeID_4;
-        jsonobject3["TofX"] = TofX;
-        jsonobject3["TofY"] = TofY;
-        jsonobject3["TofZ"] = TofZ;
-        jsonobject3["Unixtime"] = qUnixtime;
-        JsonObject jsonobject4 = jsonarray.createNestedObject();
-        jsonobject4["NodeID"] = node_asal;
-        jsonobject4["Suhu"] = suhu;
-        jsonobject4["Kelembapan"] = kelembapan;
-        jsonobject4["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-          if (!mesh.checkConnection()) {
-            do {
-              Serial.println(F("Reconnecting to mesh network..."));
-            } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-          } else {
-            Serial.println(F("Send fail, Test OK"));
-          }
-        }
-        if(!NODE_Master){
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 4 && jumlahnode[1] == 5 && jumlahnode[2] == 3 && jumlahnode[3] == 2){
-        JsonObject NodeID_4 = doc[0];
-        int fNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t qUnixtime = NodeID_4["Unixtime"];
-        JsonObject NodeID_5 = doc[1];
-        int fNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t rUnixtime = NodeID_5["Unixtime"];
-        JsonObject NodeID_3 = doc[2];
-        int fNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t pUnixtime = NodeID_3["Unixtime"];
-        JsonObject NodeID_2 = doc[3];
-        int fNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t oUnixtime = NodeID_2["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = fNodeID_4;
-        jsonobject["TofX"] = TofX;
-        jsonobject["TofY"] = TofY;
-        jsonobject["TofZ"] = TofZ;
-        jsonobject["Unixtime"] = qUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = fNodeID_5;
-        jsonobject1["usX"] = usX;
-        jsonobject1["usY"] = usY;
-        jsonobject1["usZ"] = usZ;
-        jsonobject1["Unixtime"] = rUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = fNodeID_3;
-        jsonobject2["Pitch"] = Pitch;
-        jsonobject2["Roll"] = Roll;
-        jsonobject2["Frekuensi"] = Frekuensi;
-        jsonobject2["Unixtime"] = pUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = fNodeID_2;
-        jsonobject3["Berat"] = Berat;
-        jsonobject3["Unixtime"] = oUnixtime;
-        JsonObject jsonobject4 = jsonarray.createNestedObject();
-        jsonobject4["NodeID"] = node_asal;
-        jsonobject4["Suhu"] = suhu;
-        jsonobject4["Kelembapan"] = kelembapan;
-        jsonobject4["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-          if (!mesh.checkConnection()) {
-            do {
-              Serial.println(F("Reconnecting to mesh network..."));
-            } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-          } else {
-            Serial.println(F("Send fail, Test OK"));
-          }
-        }
-        if(!NODE_Master){
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 4 && jumlahnode[1] == 5 && jumlahnode[2] == 2 && jumlahnode[3] == 3){
-        JsonObject NodeID_4 = doc[0];
-        int fNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t qUnixtime = NodeID_4["Unixtime"];
-        JsonObject NodeID_5 = doc[1];
-        int fNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t rUnixtime = NodeID_5["Unixtime"];
-        JsonObject NodeID_2 = doc[2];
-        int fNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t oUnixtime = NodeID_2["Unixtime"];
-        JsonObject NodeID_3 = doc[3];
-        int fNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t pUnixtime = NodeID_3["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = fNodeID_4;
-        jsonobject["TofX"] = TofX;
-        jsonobject["TofY"] = TofY;
-        jsonobject["TofZ"] = TofZ;
-        jsonobject["Unixtime"] = qUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = fNodeID_5;
-        jsonobject1["usX"] = usX;
-        jsonobject1["usY"] = usY;
-        jsonobject1["usZ"] = usZ;
-        jsonobject1["Unixtime"] = rUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = fNodeID_2;
-        jsonobject2["Berat"] = Berat;
-        jsonobject2["Unixtime"] = oUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = fNodeID_3;
-        jsonobject3["Pitch"] = Pitch;
-        jsonobject3["Roll"] = Roll;
-        jsonobject3["Frekuensi"] = Frekuensi;
-        jsonobject3["Unixtime"] = pUnixtime;
-        JsonObject jsonobject4 = jsonarray.createNestedObject();
-        jsonobject4["NodeID"] = node_asal;
-        jsonobject4["Suhu"] = suhu;
-        jsonobject4["Kelembapan"] = kelembapan;
-        jsonobject4["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-          if (!mesh.checkConnection()) {
-            do {
-              Serial.println(F("Reconnecting to mesh network..."));
-            } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-          } else {
-            Serial.println(F("Send fail, Test OK"));
-          }
-        }
-        if(!NODE_Master){
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 4 && jumlahnode[1] == 3 && jumlahnode[2] == 5 && jumlahnode[3] == 2){
-        JsonObject NodeID_4 = doc[0];
-        int fNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t qUnixtime = NodeID_4["Unixtime"];
-        JsonObject NodeID_3 = doc[1];
-        int fNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t pUnixtime = NodeID_3["Unixtime"];
-        JsonObject NodeID_5 = doc[2];
-        int fNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t rUnixtime = NodeID_5["Unixtime"];
-        JsonObject NodeID_2 = doc[3];
-        int fNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t oUnixtime = NodeID_2["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = fNodeID_4;
-        jsonobject["TofX"] = TofX;
-        jsonobject["TofY"] = TofY;
-        jsonobject["TofZ"] = TofZ;
-        jsonobject["Unixtime"] = qUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = fNodeID_3;
-        jsonobject1["Pitch"] = Pitch;
-        jsonobject1["Roll"] = Roll;
-        jsonobject1["Frekuensi"] = Frekuensi;
-        jsonobject1["Unixtime"] = pUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = fNodeID_5;
-        jsonobject2["usX"] = usX;
-        jsonobject2["usY"] = usY;
-        jsonobject2["usZ"] = usZ;
-        jsonobject2["Unixtime"] = rUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = fNodeID_2;
-        jsonobject3["Berat"] = Berat;
-        jsonobject3["Unixtime"] = oUnixtime;
-        JsonObject jsonobject4 = jsonarray.createNestedObject();
-        jsonobject4["NodeID"] = node_asal;
-        jsonobject4["Suhu"] = suhu;
-        jsonobject4["Kelembapan"] = kelembapan;
-        jsonobject4["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-          if (!mesh.checkConnection()) {
-            do {
-              Serial.println(F("Reconnecting to mesh network..."));
-            } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-          } else {
-            Serial.println(F("Send fail, Test OK"));
-          }
-        }
-        if(!NODE_Master){
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 4 && jumlahnode[1] == 3 && jumlahnode[2] == 2 && jumlahnode[3] == 5){
-        JsonObject NodeID_4 = doc[0];
-        int fNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t qUnixtime = NodeID_4["Unixtime"];
-        JsonObject NodeID_3 = doc[1];
-        int fNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t pUnixtime = NodeID_3["Unixtime"];
-        JsonObject NodeID_2 = doc[2];
-        int fNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t oUnixtime = NodeID_2["Unixtime"];
-        JsonObject NodeID_5 = doc[3];
-        int fNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t rUnixtime = NodeID_5["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = fNodeID_4;
-        jsonobject["TofX"] = TofX;
-        jsonobject["TofY"] = TofY;
-        jsonobject["TofZ"] = TofZ;
-        jsonobject["Unixtime"] = qUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = fNodeID_3;
-        jsonobject1["Pitch"] = Pitch;
-        jsonobject1["Roll"] = Roll;
-        jsonobject1["Frekuensi"] = Frekuensi;
-        jsonobject1["Unixtime"] = pUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = fNodeID_2;
-        jsonobject2["Berat"] = Berat;
-        jsonobject2["Unixtime"] = oUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = fNodeID_5;
-        jsonobject3["usX"] = usX;
-        jsonobject3["usY"] = usY;
-        jsonobject3["usZ"] = usZ;
-        jsonobject3["Unixtime"] = rUnixtime;
-        JsonObject jsonobject4 = jsonarray.createNestedObject();
-        jsonobject4["NodeID"] = node_asal;
-        jsonobject4["Suhu"] = suhu;
-        jsonobject4["Kelembapan"] = kelembapan;
-        jsonobject4["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-          if (!mesh.checkConnection()) {
-            do {
-              Serial.println(F("Reconnecting to mesh network..."));
-            } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-          } else {
-            Serial.println(F("Send fail, Test OK"));
-          }
-        }
-        if(!NODE_Master){
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 4 && jumlahnode[1] == 2 && jumlahnode[2] == 5 && jumlahnode[3] == 3){
-        JsonObject NodeID_4 = doc[0];
-        int fNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t qUnixtime = NodeID_4["Unixtime"];
-        JsonObject NodeID_2 = doc[1];
-        int fNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t oUnixtime = NodeID_2["Unixtime"];
-        JsonObject NodeID_5 = doc[2];
-        int fNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t rUnixtime = NodeID_5["Unixtime"];
-        JsonObject NodeID_3 = doc[3];
-        int fNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t pUnixtime = NodeID_3["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = fNodeID_4;
-        jsonobject["TofX"] = TofX;
-        jsonobject["TofY"] = TofY;
-        jsonobject["TofZ"] = TofZ;
-        jsonobject["Unixtime"] = qUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = fNodeID_2;
-        jsonobject1["Berat"] = Berat;
-        jsonobject1["Unixtime"] = oUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = fNodeID_5;
-        jsonobject2["usX"] = usX;
-        jsonobject2["usY"] = usY;
-        jsonobject2["usZ"] = usZ;
-        jsonobject2["Unixtime"] = rUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = fNodeID_3;
-        jsonobject3["Pitch"] = Pitch;
-        jsonobject3["Roll"] = Roll;
-        jsonobject3["Frekuensi"] = Frekuensi;
-        jsonobject3["Unixtime"] = pUnixtime;
-        JsonObject jsonobject4 = jsonarray.createNestedObject();
-        jsonobject4["NodeID"] = node_asal;
-        jsonobject4["Suhu"] = suhu;
-        jsonobject4["Kelembapan"] = kelembapan;
-        jsonobject4["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-          if (!mesh.checkConnection()) {
-            do {
-              Serial.println(F("Reconnecting to mesh network..."));
-            } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-          } else {
-            Serial.println(F("Send fail, Test OK"));
-          }
-        }
-        if(!NODE_Master){
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 4 && jumlahnode[1] == 2 && jumlahnode[2] == 3 && jumlahnode[3] == 5){
-        JsonObject NodeID_4 = doc[0];
-        int fNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t qUnixtime = NodeID_4["Unixtime"];
-        JsonObject NodeID_2 = doc[1];
-        int fNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t oUnixtime = NodeID_2["Unixtime"];
-        JsonObject NodeID_3 = doc[2];
-        int fNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t pUnixtime = NodeID_3["Unixtime"];
-        JsonObject NodeID_5 = doc[3];
-        int fNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t rUnixtime = NodeID_5["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = fNodeID_4;
-        jsonobject["TofX"] = TofX;
-        jsonobject["TofY"] = TofY;
-        jsonobject["TofZ"] = TofZ;
-        jsonobject["Unixtime"] = qUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = fNodeID_2;
-        jsonobject1["Berat"] = Berat;
-        jsonobject1["Unixtime"] = oUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = fNodeID_3;
-        jsonobject2["Pitch"] = Pitch;
-        jsonobject2["Roll"] = Roll;
-        jsonobject2["Frekuensi"] = Frekuensi;
-        jsonobject2["Unixtime"] = pUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = fNodeID_5;
-        jsonobject3["usX"] = usX;
-        jsonobject3["usY"] = usY;
-        jsonobject3["usZ"] = usZ;
-        jsonobject3["Unixtime"] = rUnixtime;
-        JsonObject jsonobject4 = jsonarray.createNestedObject();
-        jsonobject4["NodeID"] = node_asal;
-        jsonobject4["Suhu"] = suhu;
-        jsonobject4["Kelembapan"] = kelembapan;
-        jsonobject4["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-          if (!mesh.checkConnection()) {
-            do {
-              Serial.println(F("Reconnecting to mesh network..."));
-            } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-          } else {
-            Serial.println(F("Send fail, Test OK"));
-          }
-        }
-        if(!NODE_Master){
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 3 && jumlahnode[1] == 5 && jumlahnode[2] == 4 && jumlahnode[3] == 2){
-        JsonObject NodeID_3 = doc[0];
-        int fNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t pUnixtime = NodeID_3["Unixtime"];
-        JsonObject NodeID_5 = doc[1];
-        int fNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t rUnixtime = NodeID_5["Unixtime"];
-        JsonObject NodeID_4 = doc[2];
-        int fNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t qUnixtime = NodeID_4["Unixtime"];
-        JsonObject NodeID_2 = doc[3];
-        int fNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t oUnixtime = NodeID_2["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = fNodeID_3;
-        jsonobject["Pitch"] = Pitch;
-        jsonobject["Roll"] = Roll;
-        jsonobject["Frekuensi"] = Frekuensi;
-        jsonobject["Unixtime"] = pUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = fNodeID_5;
-        jsonobject1["usX"] = usX;
-        jsonobject1["usY"] = usY;
-        jsonobject1["usZ"] = usZ;
-        jsonobject1["Unixtime"] = rUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = fNodeID_4;
-        jsonobject2["TofX"] = TofX;
-        jsonobject2["TofY"] = TofY;
-        jsonobject2["TofZ"] = TofZ;
-        jsonobject2["Unixtime"] = qUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = fNodeID_2;
-        jsonobject3["Berat"] = Berat;
-        jsonobject3["Unixtime"] = oUnixtime;
-        JsonObject jsonobject4 = jsonarray.createNestedObject();
-        jsonobject4["NodeID"] = node_asal;
-        jsonobject4["Suhu"] = suhu;
-        jsonobject4["Kelembapan"] = kelembapan;
-        jsonobject4["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-          if (!mesh.checkConnection()) {
-            do {
-              Serial.println(F("Reconnecting to mesh network..."));
-            } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-          } else {
-            Serial.println(F("Send fail, Test OK"));
-          }
-        }
-        if(!NODE_Master){
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 3 && jumlahnode[1] == 5 && jumlahnode[2] == 2 && jumlahnode[3] == 4){
-        JsonObject NodeID_3 = doc[0];
-        int fNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t pUnixtime = NodeID_3["Unixtime"];
-        JsonObject NodeID_5 = doc[1];
-        int fNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t rUnixtime = NodeID_5["Unixtime"];
-        JsonObject NodeID_2 = doc[2];
-        int fNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t oUnixtime = NodeID_2["Unixtime"];
-        JsonObject NodeID_4 = doc[3];
-        int fNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t qUnixtime = NodeID_4["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = fNodeID_3;
-        jsonobject["Pitch"] = Pitch;
-        jsonobject["Roll"] = Roll;
-        jsonobject["Frekuensi"] = Frekuensi;
-        jsonobject["Unixtime"] = pUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = fNodeID_5;
-        jsonobject1["usX"] = usX;
-        jsonobject1["usY"] = usY;
-        jsonobject1["usZ"] = usZ;
-        jsonobject1["Unixtime"] = rUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = fNodeID_2;
-        jsonobject2["Berat"] = Berat;
-        jsonobject2["Unixtime"] = oUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = fNodeID_4;
-        jsonobject3["TofX"] = TofX;
-        jsonobject3["TofY"] = TofY;
-        jsonobject3["TofZ"] = TofZ;
-        jsonobject3["Unixtime"] = qUnixtime;
-        JsonObject jsonobject4 = jsonarray.createNestedObject();
-        jsonobject4["NodeID"] = node_asal;
-        jsonobject4["Suhu"] = suhu;
-        jsonobject4["Kelembapan"] = kelembapan;
-        jsonobject4["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-          if (!mesh.checkConnection()) {
-            do {
-              Serial.println(F("Reconnecting to mesh network..."));
-            } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-          } else {
-            Serial.println(F("Send fail, Test OK"));
-          }
-        }
-        if(!NODE_Master){
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 3 && jumlahnode[1] == 4 && jumlahnode[2] == 5 && jumlahnode[3] == 2){
-        JsonObject NodeID_3 = doc[0];
-        int fNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t pUnixtime = NodeID_3["Unixtime"];
-        JsonObject NodeID_4 = doc[1];
-        int fNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t qUnixtime = NodeID_4["Unixtime"];
-        JsonObject NodeID_5 = doc[2];
-        int fNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t rUnixtime = NodeID_5["Unixtime"];
-        JsonObject NodeID_2 = doc[3];
-        int fNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t oUnixtime = NodeID_2["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = fNodeID_3;
-        jsonobject["Pitch"] = Pitch;
-        jsonobject["Roll"] = Roll;
-        jsonobject["Frekuensi"] = Frekuensi;
-        jsonobject["Unixtime"] = pUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = fNodeID_4;
-        jsonobject1["TofX"] = TofX;
-        jsonobject1["TofY"] = TofY;
-        jsonobject1["TofZ"] = TofZ;
-        jsonobject1["Unixtime"] = qUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = fNodeID_5;
-        jsonobject2["usX"] = usX;
-        jsonobject2["usY"] = usY;
-        jsonobject2["usZ"] = usZ;
-        jsonobject2["Unixtime"] = rUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = fNodeID_2;
-        jsonobject3["Berat"] = Berat;
-        jsonobject3["Unixtime"] = oUnixtime;
-        JsonObject jsonobject4 = jsonarray.createNestedObject();
-        jsonobject4["NodeID"] = node_asal;
-        jsonobject4["Suhu"] = suhu;
-        jsonobject4["Kelembapan"] = kelembapan;
-        jsonobject4["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-          if (!mesh.checkConnection()) {
-            do {
-              Serial.println(F("Reconnecting to mesh network..."));
-            } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-          } else {
-            Serial.println(F("Send fail, Test OK"));
-          }
-        }
-        if(!NODE_Master){
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 3 && jumlahnode[1] == 4 && jumlahnode[2] == 2 && jumlahnode[3] == 5){
-        JsonObject NodeID_3 = doc[0];
-        int fNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t pUnixtime = NodeID_3["Unixtime"];
-        JsonObject NodeID_4 = doc[1];
-        int fNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t qUnixtime = NodeID_4["Unixtime"];
-        JsonObject NodeID_2 = doc[2];
-        int fNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t oUnixtime = NodeID_2["Unixtime"];
-        JsonObject NodeID_5 = doc[3];
-        int fNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t rUnixtime = NodeID_5["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = fNodeID_3;
-        jsonobject["Pitch"] = Pitch;
-        jsonobject["Roll"] = Roll;
-        jsonobject["Frekuensi"] = Frekuensi;
-        jsonobject["Unixtime"] = pUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = fNodeID_4;
-        jsonobject1["TofX"] = TofX;
-        jsonobject1["TofY"] = TofY;
-        jsonobject1["TofZ"] = TofZ;
-        jsonobject1["Unixtime"] = qUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = fNodeID_2;
-        jsonobject2["Berat"] = Berat;
-        jsonobject2["Unixtime"] = oUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = fNodeID_5;
-        jsonobject3["usX"] = usX;
-        jsonobject3["usY"] = usY;
-        jsonobject3["usZ"] = usZ;
-        jsonobject3["Unixtime"] = rUnixtime;
-        JsonObject jsonobject4 = jsonarray.createNestedObject();
-        jsonobject4["NodeID"] = node_asal;
-        jsonobject4["Suhu"] = suhu;
-        jsonobject4["Kelembapan"] = kelembapan;
-        jsonobject4["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-          if (!mesh.checkConnection()) {
-            do {
-              Serial.println(F("Reconnecting to mesh network..."));
-            } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-          } else {
-            Serial.println(F("Send fail, Test OK"));
-          }
-        }
-        if(!NODE_Master){
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 3 && jumlahnode[1] == 2 && jumlahnode[2] == 5 && jumlahnode[3] == 4){
-        JsonObject NodeID_3 = doc[0];
-        int fNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t pUnixtime = NodeID_3["Unixtime"];
-        JsonObject NodeID_2 = doc[1];
-        int fNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t oUnixtime = NodeID_2["Unixtime"];
-        JsonObject NodeID_5 = doc[2];
-        int fNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t rUnixtime = NodeID_5["Unixtime"];
-        JsonObject NodeID_4 = doc[3];
-        int fNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t qUnixtime = NodeID_4["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = fNodeID_3;
-        jsonobject["Pitch"] = Pitch;
-        jsonobject["Roll"] = Roll;
-        jsonobject["Frekuensi"] = Frekuensi;
-        jsonobject["Unixtime"] = pUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = fNodeID_2;
-        jsonobject1["Berat"] = Berat;
-        jsonobject1["Unixtime"] = oUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = fNodeID_5;
-        jsonobject2["usX"] = usX;
-        jsonobject2["usY"] = usY;
-        jsonobject2["usZ"] = usZ;
-        jsonobject2["Unixtime"] = rUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = fNodeID_4;
-        jsonobject3["TofX"] = TofX;
-        jsonobject3["TofY"] = TofY;
-        jsonobject3["TofZ"] = TofZ;
-        jsonobject3["Unixtime"] = qUnixtime;
-        JsonObject jsonobject4 = jsonarray.createNestedObject();
-        jsonobject4["NodeID"] = node_asal;
-        jsonobject4["Suhu"] = suhu;
-        jsonobject4["Kelembapan"] = kelembapan;
-        jsonobject4["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-          if (!mesh.checkConnection()) {
-            do {
-              Serial.println(F("Reconnecting to mesh network..."));
-            } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-          } else {
-            Serial.println(F("Send fail, Test OK"));
-          }
-        }
-        if(!NODE_Master){
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 3 && jumlahnode[1] == 2 && jumlahnode[2] == 4 && jumlahnode[3] == 5){
-        JsonObject NodeID_3 = doc[0];
-        int fNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t pUnixtime = NodeID_3["Unixtime"];
-        JsonObject NodeID_2 = doc[1];
-        int fNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t oUnixtime = NodeID_2["Unixtime"];
-        JsonObject NodeID_4 = doc[2];
-        int fNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t qUnixtime = NodeID_4["Unixtime"];
-        JsonObject NodeID_5 = doc[3];
-        int fNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t rUnixtime = NodeID_5["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = fNodeID_3;
-        jsonobject["Pitch"] = Pitch;
-        jsonobject["Roll"] = Roll;
-        jsonobject["Frekuensi"] = Frekuensi;
-        jsonobject["Unixtime"] = pUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = fNodeID_2;
-        jsonobject1["Berat"] = Berat;
-        jsonobject1["Unixtime"] = oUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = fNodeID_4;
-        jsonobject2["TofX"] = TofX;
-        jsonobject2["TofY"] = TofY;
-        jsonobject2["TofZ"] = TofZ;
-        jsonobject2["Unixtime"] = qUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = fNodeID_5;
-        jsonobject3["usX"] = usX;
-        jsonobject3["usY"] = usY;
-        jsonobject3["usZ"] = usZ;
-        jsonobject3["Unixtime"] = rUnixtime;
-        JsonObject jsonobject4 = jsonarray.createNestedObject();
-        jsonobject4["NodeID"] = node_asal;
-        jsonobject4["Suhu"] = suhu;
-        jsonobject4["Kelembapan"] = kelembapan;
-        jsonobject4["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-          if (!mesh.checkConnection()) {
-            do {
-              Serial.println(F("Reconnecting to mesh network..."));
-            } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-          } else {
-            Serial.println(F("Send fail, Test OK"));
-          }
-        }
-        if(!NODE_Master){
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 2 && jumlahnode[1] == 5 && jumlahnode[2] == 4 && jumlahnode[3] == 3){
-        JsonObject NodeID_2 = doc[0];
-        int fNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t oUnixtime = NodeID_2["Unixtime"];
-        JsonObject NodeID_5 = doc[1];
-        int fNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t rUnixtime = NodeID_5["Unixtime"];
-        JsonObject NodeID_4 = doc[2];
-        int fNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t qUnixtime = NodeID_4["Unixtime"];
-        JsonObject NodeID_3 = doc[3];
-        int fNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t pUnixtime = NodeID_3["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = fNodeID_2;
-        jsonobject["Berat"] = Berat;
-        jsonobject["Unixtime"] = oUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = fNodeID_5;
-        jsonobject1["usX"] = usX;
-        jsonobject1["usY"] = usY;
-        jsonobject1["usZ"] = usZ;
-        jsonobject1["Unixtime"] = rUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = fNodeID_4;
-        jsonobject2["TofX"] = TofX;
-        jsonobject2["TofY"] = TofY;
-        jsonobject2["TofZ"] = TofZ;
-        jsonobject2["Unixtime"] = qUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = fNodeID_3;
-        jsonobject3["Pitch"] = Pitch;
-        jsonobject3["Roll"] = Roll;
-        jsonobject3["Frekuensi"] = Frekuensi;
-        jsonobject3["Unixtime"] = pUnixtime;
-        JsonObject jsonobject4 = jsonarray.createNestedObject();
-        jsonobject4["NodeID"] = node_asal;
-        jsonobject4["Suhu"] = suhu;
-        jsonobject4["Kelembapan"] = kelembapan;
-        jsonobject4["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-          if (!mesh.checkConnection()) {
-            do {
-              Serial.println(F("Reconnecting to mesh network..."));
-            } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-          } else {
-            Serial.println(F("Send fail, Test OK"));
-          }
-        }
-        if(!NODE_Master){
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 2 && jumlahnode[1] == 5 && jumlahnode[2] == 3 && jumlahnode[3] == 4){
-        JsonObject NodeID_2 = doc[0];
-        int fNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t oUnixtime = NodeID_2["Unixtime"];
-        JsonObject NodeID_5 = doc[1];
-        int fNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t rUnixtime = NodeID_5["Unixtime"];
-        JsonObject NodeID_3 = doc[2];
-        int fNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t pUnixtime = NodeID_3["Unixtime"];
-        JsonObject NodeID_4 = doc[3];
-        int fNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t qUnixtime = NodeID_4["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = fNodeID_2;
-        jsonobject["Berat"] = Berat;
-        jsonobject["Unixtime"] = oUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = fNodeID_5;
-        jsonobject1["usX"] = usX;
-        jsonobject1["usY"] = usY;
-        jsonobject1["usZ"] = usZ;
-        jsonobject1["Unixtime"] = rUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = fNodeID_3;
-        jsonobject2["Pitch"] = Pitch;
-        jsonobject2["Roll"] = Roll;
-        jsonobject2["Frekuensi"] = Frekuensi;
-        jsonobject2["Unixtime"] = pUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = fNodeID_4;
-        jsonobject3["TofX"] = TofX;
-        jsonobject3["TofY"] = TofY;
-        jsonobject3["TofZ"] = TofZ;
-        jsonobject3["Unixtime"] = qUnixtime;
-        JsonObject jsonobject4 = jsonarray.createNestedObject();
-        jsonobject4["NodeID"] = node_asal;
-        jsonobject4["Suhu"] = suhu;
-        jsonobject4["Kelembapan"] = kelembapan;
-        jsonobject4["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-          if (!mesh.checkConnection()) {
-            do {
-              Serial.println(F("Reconnecting to mesh network..."));
-            } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-          } else {
-            Serial.println(F("Send fail, Test OK"));
-          }
-        }
-        if(!NODE_Master){
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 2 && jumlahnode[1] == 4 && jumlahnode[2] == 5 && jumlahnode[3] == 3){
-        JsonObject NodeID_2 = doc[0];
-        int fNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t oUnixtime = NodeID_2["Unixtime"];
-        JsonObject NodeID_4 = doc[1];
-        int fNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t qUnixtime = NodeID_4["Unixtime"];
-        JsonObject NodeID_5 = doc[2];
-        int fNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t rUnixtime = NodeID_5["Unixtime"];
-        JsonObject NodeID_3 = doc[3];
-        int fNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t pUnixtime = NodeID_3["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = fNodeID_2;
-        jsonobject["Berat"] = Berat;
-        jsonobject["Unixtime"] = oUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = fNodeID_4;
-        jsonobject1["TofX"] = TofX;
-        jsonobject1["TofY"] = TofY;
-        jsonobject1["TofZ"] = TofZ;
-        jsonobject1["Unixtime"] = qUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = fNodeID_5;
-        jsonobject2["usX"] = usX;
-        jsonobject2["usY"] = usY;
-        jsonobject2["usZ"] = usZ;
-        jsonobject2["Unixtime"] = rUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = fNodeID_3;
-        jsonobject3["Pitch"] = Pitch;
-        jsonobject3["Roll"] = Roll;
-        jsonobject3["Frekuensi"] = Frekuensi;
-        jsonobject3["Unixtime"] = pUnixtime;
-        JsonObject jsonobject4 = jsonarray.createNestedObject();
-        jsonobject4["NodeID"] = node_asal;
-        jsonobject4["Suhu"] = suhu;
-        jsonobject4["Kelembapan"] = kelembapan;
-        jsonobject4["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-          if (!mesh.checkConnection()) {
-            do {
-              Serial.println(F("Reconnecting to mesh network..."));
-            } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-          } else {
-            Serial.println(F("Send fail, Test OK"));
-          }
-        }
-        if(!NODE_Master){
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 2 && jumlahnode[1] == 4 && jumlahnode[2] == 3 && jumlahnode[3] == 5){
-        JsonObject NodeID_2 = doc[0];
-        int fNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t oUnixtime = NodeID_2["Unixtime"];
-        JsonObject NodeID_4 = doc[1];
-        int fNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t qUnixtime = NodeID_4["Unixtime"];
-        JsonObject NodeID_3 = doc[2];
-        int fNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t pUnixtime = NodeID_3["Unixtime"];
-        JsonObject NodeID_5 = doc[3];
-        int fNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t rUnixtime = NodeID_5["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = fNodeID_2;
-        jsonobject["Berat"] = Berat;
-        jsonobject["Unixtime"] = oUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = fNodeID_4;
-        jsonobject1["TofX"] = TofX;
-        jsonobject1["TofY"] = TofY;
-        jsonobject1["TofZ"] = TofZ;
-        jsonobject1["Unixtime"] = qUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = fNodeID_3;
-        jsonobject2["Pitch"] = Pitch;
-        jsonobject2["Roll"] = Roll;
-        jsonobject2["Frekuensi"] = Frekuensi;
-        jsonobject2["Unixtime"] = pUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = fNodeID_5;
-        jsonobject3["usX"] = usX;
-        jsonobject3["usY"] = usY;
-        jsonobject3["usZ"] = usZ;
-        jsonobject3["Unixtime"] = rUnixtime;
-        JsonObject jsonobject4 = jsonarray.createNestedObject();
-        jsonobject4["NodeID"] = node_asal;
-        jsonobject4["Suhu"] = suhu;
-        jsonobject4["Kelembapan"] = kelembapan;
-        jsonobject4["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-          if (!mesh.checkConnection()) {
-            do {
-              Serial.println(F("Reconnecting to mesh network..."));
-            } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-          } else {
-            Serial.println(F("Send fail, Test OK"));
-          }
-        }
-        if(!NODE_Master){
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 2 && jumlahnode[1] == 3 && jumlahnode[2] == 5 && jumlahnode[3] == 4){
-        JsonObject NodeID_2 = doc[0];
-        int fNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t oUnixtime = NodeID_2["Unixtime"];
-        JsonObject NodeID_3 = doc[1];
-        int fNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t pUnixtime = NodeID_3["Unixtime"];
-        JsonObject NodeID_5 = doc[2];
-        int fNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t rUnixtime = NodeID_5["Unixtime"];
-        JsonObject NodeID_4 = doc[3];
-        int fNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t qUnixtime = NodeID_4["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = fNodeID_2;
-        jsonobject["Berat"] = Berat;
-        jsonobject["Unixtime"] = oUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = fNodeID_3;
-        jsonobject1["Pitch"] = Pitch;
-        jsonobject1["Roll"] = Roll;
-        jsonobject1["Frekuensi"] = Frekuensi;
-        jsonobject1["Unixtime"] = pUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = fNodeID_5;
-        jsonobject2["usX"] = usX;
-        jsonobject2["usY"] = usY;
-        jsonobject2["usZ"] = usZ;
-        jsonobject2["Unixtime"] = rUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = fNodeID_4;
-        jsonobject3["TofX"] = TofX;
-        jsonobject3["TofY"] = TofY;
-        jsonobject3["TofZ"] = TofZ;
-        jsonobject3["Unixtime"] = qUnixtime;
-        JsonObject jsonobject4 = jsonarray.createNestedObject();
-        jsonobject4["NodeID"] = node_asal;
-        jsonobject4["Suhu"] = suhu;
-        jsonobject4["Kelembapan"] = kelembapan;
-        jsonobject4["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-          if (!mesh.checkConnection()) {
-            do {
-              Serial.println(F("Reconnecting to mesh network..."));
-            } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-          } else {
-            Serial.println(F("Send fail, Test OK"));
-          }
-        }
-        if(!NODE_Master){
-          digitalWrite(LED_BUILTIN, HIGH);
-          delay(100);
-        }
-        digitalWrite(LED_BUILTIN, LOW);
-      }
-      if(jumlahnode[0] == 2 && jumlahnode[1] == 3 && jumlahnode[2] == 4 && jumlahnode[3] == 5){
-        JsonObject NodeID_2 = doc[0];
-        int fNodeID_2 = NodeID_2["NodeID"];
-        int Berat = NodeID_2["Berat"];
-        uint32_t oUnixtime = NodeID_2["Unixtime"];
-        JsonObject NodeID_3 = doc[1];
-        int fNodeID_3 = NodeID_3["NodeID"];
-        int Pitch = NodeID_3["Pitch"];
-        int Roll = NodeID_3["Roll"];
-        int Frekuensi = NodeID_3["Frekuensi"];
-        uint32_t pUnixtime = NodeID_3["Unixtime"];
-        JsonObject NodeID_4 = doc[2];
-        int fNodeID_4 = NodeID_4["NodeID"];
-        int TofX = NodeID_4["TofX"];
-        int TofY = NodeID_4["TofY"];
-        int TofZ = NodeID_4["TofZ"];
-        uint32_t qUnixtime = NodeID_4["Unixtime"];
-        JsonObject NodeID_5 = doc[3];
-        int fNodeID_5 = NodeID_5["NodeID"];
-        int usX = NodeID_5["usX"];
-        int usY = NodeID_5["usY"];
-        int usZ = NodeID_5["usZ"];
-        uint32_t rUnixtime = NodeID_5["Unixtime"];
-        JsonArray jsonarray = doc.to<JsonArray>();
-        JsonObject jsonobject = jsonarray.createNestedObject();
-        jsonobject["NodeID"] = fNodeID_2;
-        jsonobject["Berat"] = Berat;
-        jsonobject["Unixtime"] = oUnixtime;
-        JsonObject jsonobject1 = jsonarray.createNestedObject();
-        jsonobject1["NodeID"] = fNodeID_3;
-        jsonobject1["Pitch"] = Pitch;
-        jsonobject1["Roll"] = Roll;
-        jsonobject1["Frekuensi"] = Frekuensi;
-        jsonobject1["Unixtime"] = pUnixtime;
-        JsonObject jsonobject2 = jsonarray.createNestedObject();
-        jsonobject2["NodeID"] = fNodeID_4;
-        jsonobject2["TofX"] = TofX;
-        jsonobject2["TofY"] = TofY;
-        jsonobject2["TofZ"] = TofZ;
-        jsonobject2["Unixtime"] = qUnixtime;
-        JsonObject jsonobject3 = jsonarray.createNestedObject();
-        jsonobject3["NodeID"] = fNodeID_5;
-        jsonobject3["usX"] = usX;
-        jsonobject3["usY"] = usY;
-        jsonobject3["usZ"] = usZ;
-        jsonobject3["Unixtime"] = rUnixtime;
-        JsonObject jsonobject4 = jsonarray.createNestedObject();
-        jsonobject4["NodeID"] = node_asal;
-        jsonobject4["Suhu"] = suhu;
-        jsonobject4["Kelembapan"] = kelembapan;
-        jsonobject4["Unixtime"] = now.unixtime();
-        datakirim = "";
-        serializeJson(doc, datakirim);
-        char kirim_loop[datakirim.length() + 1];
-        datakirim.toCharArray(kirim_loop,sizeof(kirim_loop));
-        if(!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop), NODE_Master)){
-          Serial.print(F("GAGAL TERKIRIM KE NODE MASTER"));
-          if (!mesh.checkConnection()) {
-            do {
-              Serial.println(F("Reconnecting to mesh network..."));
-            } while (mesh.renewAddress() == MESH_DEFAULT_ADDRESS);
-          } else {
-            Serial.println(F("Send fail, Test OK"));
-          }
-        }
-        if(!NODE_Master){
           digitalWrite(LED_BUILTIN, HIGH);
           delay(100);
         }
         digitalWrite(LED_BUILTIN, LOW);
       }
     }
+    if (pesan.ID == 25) {
+      if (NODE_3_RSSI >= NODE_4_RSSI) {
+        paket_pesan pesan = { 251, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_3);
+        bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+        if (!NODE_3) {
+          paket_pesan pesan = { 2513, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+          RF24NetworkHeader header(/*to node*/ NODE_4);
+          bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+          Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+          if (!NODE_4) {
+            paket_pesan pesan = { 25134, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_Master);
+            bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+          }
+          digitalWrite(LED_BUILTIN, HIGH);
+          delay(100);
+        }
+        digitalWrite(LED_BUILTIN, LOW);
+      } else if (NODE_4_RSSI >= NODE_3_RSSI) {
+        paket_pesan pesan = { 251, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_4);
+        bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+        if (!NODE_4) {
+          paket_pesan pesan = { 2514, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+          RF24NetworkHeader header(/*to node*/ NODE_3);
+          bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+          Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+          if (!NODE_3) {
+            paket_pesan pesan = { 25143, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_Master);
+            bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+          }
+          digitalWrite(LED_BUILTIN, HIGH);
+          delay(100);
+        }
+        digitalWrite(LED_BUILTIN, LOW);
+      }
+    }
+    if (pesan.ID == 32) {
+      if (NODE_4_RSSI >= NODE_5_RSSI) {
+        paket_pesan pesan = { 321, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_4);
+        bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+        if (!NODE_4) {
+          paket_pesan pesan = { 3214, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+          RF24NetworkHeader header(/*to node*/ NODE_5);
+          bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+          Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+          if (!NODE_5) {
+            paket_pesan pesan = { 32145, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_Master);
+            bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+          }
+          digitalWrite(LED_BUILTIN, HIGH);
+          delay(100);
+        }
+        digitalWrite(LED_BUILTIN, LOW);
+      } else if (NODE_5_RSSI >= NODE_4_RSSI) {
+        paket_pesan pesan = { 321, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_5);
+        bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+        if (!NODE_5) {
+          paket_pesan pesan = { 3215, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+          RF24NetworkHeader header(/*to node*/ NODE_4);
+          bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+          Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+          if (!NODE_4) {
+            paket_pesan pesan = { 32154, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_Master);
+            bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+          }
+          digitalWrite(LED_BUILTIN, HIGH);
+          delay(100);
+        }
+        digitalWrite(LED_BUILTIN, LOW);
+      }
+    }
+    if (pesan.ID == 34) {
+      if (NODE_2_RSSI >= NODE_5_RSSI) {
+        paket_pesan pesan = { 341, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_2);
+        bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+        if (!NODE_2) {
+          paket_pesan pesan = { 3412, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+          RF24NetworkHeader header(/*to node*/ NODE_5);
+          bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+          Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+          if (!NODE_5) {
+            paket_pesan pesan = { 34125, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_Master);
+            bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+          }
+          digitalWrite(LED_BUILTIN, HIGH);
+          delay(100);
+        }
+        digitalWrite(LED_BUILTIN, LOW);
+      } else if (NODE_5_RSSI >= NODE_2_RSSI) {
+        paket_pesan pesan = { 341, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_5);
+        bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+        if (!NODE_5) {
+          paket_pesan pesan = { 3415, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+          RF24NetworkHeader header(/*to node*/ NODE_2);
+          bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+          Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+          if (!NODE_2) {
+            paket_pesan pesan = { 34152, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_Master);
+            bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+          }
+          digitalWrite(LED_BUILTIN, HIGH);
+          delay(100);
+        }
+        digitalWrite(LED_BUILTIN, LOW);
+      }
+    }
+    if (pesan.ID == 35) {
+      if (NODE_2_RSSI >= NODE_4_RSSI) {
+        paket_pesan pesan = { 351, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_2);
+        bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+        if (!NODE_2) {
+          paket_pesan pesan = { 3512, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+          RF24NetworkHeader header(/*to node*/ NODE_4);
+          bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+          Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+          if (!NODE_4) {
+            paket_pesan pesan = { 35124, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_Master);
+            bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+          }
+          digitalWrite(LED_BUILTIN, HIGH);
+          delay(100);
+        }
+        digitalWrite(LED_BUILTIN, LOW);
+      } else if (NODE_4_RSSI >= NODE_2_RSSI) {
+        paket_pesan pesan = { 351, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_4);
+        bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+        if (!NODE_4) {
+          paket_pesan pesan = { 3514, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+          RF24NetworkHeader header(/*to node*/ NODE_2);
+          bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+          Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+          if (!NODE_2) {
+            paket_pesan pesan = { 35142, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_Master);
+            bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+          }
+          digitalWrite(LED_BUILTIN, HIGH);
+          delay(100);
+        }
+        digitalWrite(LED_BUILTIN, LOW);
+      }
+    }
+    if (pesan.ID == 42) {
+      if (NODE_3_RSSI >= NODE_5_RSSI) {
+        paket_pesan pesan = { 421, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_3);
+        bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+        if (!NODE_3) {
+          paket_pesan pesan = { 4213, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+          RF24NetworkHeader header(/*to node*/ NODE_5);
+          bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+          Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+          if (!NODE_5) {
+            paket_pesan pesan = { 42135, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_Master);
+            bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+          }
+          digitalWrite(LED_BUILTIN, HIGH);
+          delay(100);
+        }
+        digitalWrite(LED_BUILTIN, LOW);
+      } else if (NODE_5_RSSI >= NODE_3_RSSI) {
+        paket_pesan pesan = { 421, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_5);
+        bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+        if (!NODE_5) {
+          paket_pesan pesan = { 4215, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+          RF24NetworkHeader header(/*to node*/ NODE_3);
+          bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+          Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+          if (!NODE_3) {
+            paket_pesan pesan = { 42153, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_Master);
+            bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+          }
+          digitalWrite(LED_BUILTIN, HIGH);
+          delay(100);
+        }
+        digitalWrite(LED_BUILTIN, LOW);
+      }
+    }
+    if (pesan.ID == 43) {
+      if (NODE_2_RSSI >= NODE_5_RSSI) {
+        paket_pesan pesan = { 431, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_2);
+        bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+        if (!NODE_2) {
+          paket_pesan pesan = { 4312, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+          RF24NetworkHeader header(/*to node*/ NODE_5);
+          bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+          Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+          if (!NODE_5) {
+            paket_pesan pesan = { 43125, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_Master);
+            bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+          }
+          digitalWrite(LED_BUILTIN, HIGH);
+          delay(100);
+        }
+        digitalWrite(LED_BUILTIN, LOW);
+      } else if (NODE_5_RSSI >= NODE_2_RSSI) {
+        paket_pesan pesan = { 431, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_5);
+        bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+        if (!NODE_5) {
+          paket_pesan pesan = { 4315, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+          RF24NetworkHeader header(/*to node*/ NODE_2);
+          bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+          Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+          if (!NODE_2) {
+            paket_pesan pesan = { 43152, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_Master);
+            bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+          }
+          digitalWrite(LED_BUILTIN, HIGH);
+          delay(100);
+        }
+        digitalWrite(LED_BUILTIN, LOW);
+      }
+    }
+    if (pesan.ID == 45) {
+      if (NODE_2_RSSI >= NODE_3_RSSI) {
+        paket_pesan pesan = { 451, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_2);
+        bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+        if (!NODE_2) {
+          paket_pesan pesan = { 4512, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+          RF24NetworkHeader header(/*to node*/ NODE_3);
+          bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+          Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+          if (!NODE_3) {
+            paket_pesan pesan = { 45123, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_Master);
+            bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+          }
+          digitalWrite(LED_BUILTIN, HIGH);
+          delay(100);
+        }
+        digitalWrite(LED_BUILTIN, LOW);
+      } else if (NODE_3_RSSI >= NODE_2_RSSI) {
+        paket_pesan pesan = { 451, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_3);
+        bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+        if (!NODE_3) {
+          paket_pesan pesan = { 4513, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+          RF24NetworkHeader header(/*to node*/ NODE_2);
+          bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+          Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+          if (!NODE_2) {
+            paket_pesan pesan = { 45132, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_Master);
+            bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+          }
+          digitalWrite(LED_BUILTIN, HIGH);
+          delay(100);
+        }
+        digitalWrite(LED_BUILTIN, LOW);
+      }
+    }
+    if (pesan.ID == 52) {
+      if (NODE_3_RSSI >= NODE_4_RSSI) {
+        paket_pesan pesan = { 521, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_3);
+        bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+        if (!NODE_3) {
+          paket_pesan pesan = { 5213, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+          RF24NetworkHeader header(/*to node*/ NODE_4);
+          bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+          Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+          if (!NODE_4) {
+            paket_pesan pesan = { 52134, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_Master);
+            bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+          }
+          digitalWrite(LED_BUILTIN, HIGH);
+          delay(100);
+        }
+        digitalWrite(LED_BUILTIN, LOW);
+      } else if (NODE_4_RSSI >= NODE_3_RSSI) {
+        paket_pesan pesan = { 521, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_4);
+        bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+        if (!NODE_4) {
+          paket_pesan pesan = { 5214, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+          RF24NetworkHeader header(/*to node*/ NODE_3);
+          bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+          Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+          if (!NODE_3) {
+            paket_pesan pesan = { 52143, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_Master);
+            bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+          }
+          digitalWrite(LED_BUILTIN, HIGH);
+          delay(100);
+        }
+        digitalWrite(LED_BUILTIN, LOW);
+      }
+    }
+    if (pesan.ID == 53) {
+      if (NODE_2_RSSI >= NODE_4_RSSI) {
+        paket_pesan pesan = { 531, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_2);
+        bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+        if (!NODE_2) {
+          paket_pesan pesan = { 5312, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+          RF24NetworkHeader header(/*to node*/ NODE_4);
+          bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+          Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+          if (!NODE_4) {
+            paket_pesan pesan = { 53124, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_Master);
+            bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+          }
+          digitalWrite(LED_BUILTIN, HIGH);
+          delay(100);
+        }
+        digitalWrite(LED_BUILTIN, LOW);
+      } else if (NODE_4_RSSI >= NODE_2_RSSI) {
+        paket_pesan pesan = { 531, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_4);
+        bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+        if (!NODE_4) {
+          paket_pesan pesan = { 5314, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+          RF24NetworkHeader header(/*to node*/ NODE_2);
+          bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+          Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+          if (!NODE_2) {
+            paket_pesan pesan = { 53142, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_Master);
+            bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+          }
+          digitalWrite(LED_BUILTIN, HIGH);
+          delay(100);
+        }
+        digitalWrite(LED_BUILTIN, LOW);
+      }
+    }
+    if (pesan.ID == 54) {
+      if (NODE_2_RSSI >= NODE_3_RSSI) {
+        paket_pesan pesan = { 541, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_2);
+        bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+        if (!NODE_2) {
+          paket_pesan pesan = { 5412, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+          RF24NetworkHeader header(/*to node*/ NODE_3);
+          bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+          Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+          if (!NODE_3) {
+            paket_pesan pesan = { 54123, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_Master);
+            bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+          }
+          digitalWrite(LED_BUILTIN, HIGH);
+          delay(100);
+        }
+        digitalWrite(LED_BUILTIN, LOW);
+      } else if (NODE_3_RSSI >= NODE_2_RSSI) {
+        paket_pesan pesan = { 541, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_3);
+        bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+        if (!NODE_3) {
+          paket_pesan pesan = { 5413, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+          RF24NetworkHeader header(/*to node*/ NODE_2);
+          bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+          Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+          if (!NODE_2) {
+            paket_pesan pesan = { 54132, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+            RF24NetworkHeader header(/*to node*/ NODE_Master);
+            bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+            Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+          }
+          digitalWrite(LED_BUILTIN, HIGH);
+          delay(100);
+        }
+        digitalWrite(LED_BUILTIN, LOW);
+      }
+    }
+
+    //==================================================POSISI NODE KE - 4==================================================
+    if (pesan.ID == 234) {
+      paket_pesan pesan = { 2341, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_5);
+      bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+      if (!NODE_5) {
+        paket_pesan pesan = { 23415, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_Master);
+        bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 235) {
+      paket_pesan pesan = { 2351, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_4);
+      bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+      if (!NODE_4) {
+        paket_pesan pesan = { 23514, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_Master);
+        bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 243) {
+      paket_pesan pesan = { 2431, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_5);
+      bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+      if (!NODE_5) {
+        paket_pesan pesan = { 24315, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_Master);
+        bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 245) {
+      paket_pesan pesan = { 2451, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_3);
+      bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+      if (!NODE_3) {
+        paket_pesan pesan = { 24513, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_Master);
+        bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 253) {
+      paket_pesan pesan = { 2531, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_4);
+      bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+      if (!NODE_4) {
+        paket_pesan pesan = { 25314, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_Master);
+        bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 254) {
+      paket_pesan pesan = { 2541, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_3);
+      bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+      if (!NODE_3) {
+        paket_pesan pesan = { 25413, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_Master);
+        bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 324) {
+      paket_pesan pesan = { 3241, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_5);
+      bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+      if (!NODE_5) {
+        paket_pesan pesan = { 32415, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_Master);
+        bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 325) {
+      paket_pesan pesan = { 3251, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_4);
+      bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+      if (!NODE_4) {
+        paket_pesan pesan = { 32514, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_Master);
+        bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 342) {
+      paket_pesan pesan = { 3421, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_5);
+      bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+      if (!NODE_5) {
+        paket_pesan pesan = { 34215, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_Master);
+        bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 345) {
+      paket_pesan pesan = { 3451, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_2);
+      bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+      if (!NODE_2) {
+        paket_pesan pesan = { 34512, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_Master);
+        bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 352) {
+      paket_pesan pesan = { 3521, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_4);
+      bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+      if (!NODE_4) {
+        paket_pesan pesan = { 35214, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_Master);
+        bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 354) {
+      paket_pesan pesan = { 3541, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_2);
+      bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+      if (!NODE_2) {
+        paket_pesan pesan = { 35412, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_Master);
+        bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 423) {
+      paket_pesan pesan = { 4231, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_5);
+      bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+      if (!NODE_5) {
+        paket_pesan pesan = { 42315, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_Master);
+        bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 425) {
+      paket_pesan pesan = { 4251, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_3);
+      bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+      if (!NODE_3) {
+        paket_pesan pesan = { 42513, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_Master);
+        bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 432) {
+      paket_pesan pesan = { 4321, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_5);
+      bool NODE_5 = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_5 ? F("DATA TERKIRIM KE NODE 5") : F("GAGAL TERKIRIM KE NODE 5"));
+      if (!NODE_5) {
+        paket_pesan pesan = { 43215, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_Master);
+        bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 435) {
+      paket_pesan pesan = { 4351, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_2);
+      bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+      if (!NODE_2) {
+        paket_pesan pesan = { 43512, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_Master);
+        bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 452) {
+      paket_pesan pesan = { 4521, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_3);
+      bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+      if (!NODE_3) {
+        paket_pesan pesan = { 45213, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_Master);
+        bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 453) {
+      paket_pesan pesan = { 4531, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_2);
+      bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+      if (!NODE_2) {
+        paket_pesan pesan = { 45312, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_Master);
+        bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 523) {
+      paket_pesan pesan = { 5231, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_4);
+      bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+      if (!NODE_4) {
+        paket_pesan pesan = { 52314, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_Master);
+        bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 524) {
+      paket_pesan pesan = { 5241, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_3);
+      bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+      if (!NODE_3) {
+        paket_pesan pesan = { 52413, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_Master);
+        bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 532) {
+      paket_pesan pesan = { 5321, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_4);
+      bool NODE_4 = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_4 ? F("DATA TERKIRIM KE NODE 4") : F("GAGAL TERKIRIM KE NODE 4"));
+      if (!NODE_4) {
+        paket_pesan pesan = { 53214, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_Master);
+        bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 534) {
+      paket_pesan pesan = { 5341, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_2);
+      bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+      if (!NODE_2) {
+        paket_pesan pesan = { 53412, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_Master);
+        bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 542) {
+      paket_pesan pesan = { 5421, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_3);
+      bool NODE_3 = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_3 ? F("DATA TERKIRIM KE NODE 3") : F("GAGAL TERKIRIM KE NODE 3"));
+      if (!NODE_3) {
+        paket_pesan pesan = { 54213, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_Master);
+        bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 543) {
+      paket_pesan pesan = { 5431, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_2);
+      bool NODE_2 = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_2 ? F("DATA TERKIRIM KE NODE 2") : F("GAGAL TERKIRIM KE NODE 2"));
+      if (!NODE_2) {
+        paket_pesan pesan = { 54312, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+        RF24NetworkHeader header(/*to node*/ NODE_Master);
+        bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+        Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+
+    //==================================================POSISI NODE KE - 5==================================================
+    if (pesan.ID == 5432) {
+      paket_pesan pesan = { 54321, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_Master);
+      bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+      if (!NODE_Master) {
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 5423) {
+      paket_pesan pesan = { 54231, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_Master);
+      bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+      if (!NODE_Master) {
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 5342) {
+      paket_pesan pesan = { 53421, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_Master);
+      bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+      if (!NODE_Master) {
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 5324) {
+      paket_pesan pesan = { 53241, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_Master);
+      bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+      if (!NODE_Master) {
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 5243) {
+      paket_pesan pesan = { 52431, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_Master);
+      bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+      if (!NODE_Master) {
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 5234) {
+      paket_pesan pesan = { 52341, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_Master);
+      bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+      if (!NODE_Master) {
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 4532) {
+      paket_pesan pesan = { 45321, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_Master);
+      bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+      if (!NODE_Master) {
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 4523) {
+      paket_pesan pesan = { 45231, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_Master);
+      bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+      if (!NODE_Master) {
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 4352) {
+      paket_pesan pesan = { 43521, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_Master);
+      bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+      if (!NODE_Master) {
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 4325) {
+      paket_pesan pesan = { 43251, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_Master);
+      bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+      if (!NODE_Master) {
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 4253) {
+      paket_pesan pesan = { 42531, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_Master);
+      bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+      if (!NODE_Master) {
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 4235) {
+      paket_pesan pesan = { 42351, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_Master);
+      bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+      if (!NODE_Master) {
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 3542) {
+      paket_pesan pesan = { 35421, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_Master);
+      bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+      if (!NODE_Master) {
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 3524) {
+      paket_pesan pesan = { 35241, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_Master);
+      bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+      if (!NODE_Master) {
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 3452) {
+      paket_pesan pesan = { 34521, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_Master);
+      bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+      if (!NODE_Master) {
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 3425) {
+      paket_pesan pesan = { 34251, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_Master);
+      bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+      if (!NODE_Master) {
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 3254) {
+      paket_pesan pesan = { 32541, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_Master);
+      bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+      if (!NODE_Master) {
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 3245) {
+      paket_pesan pesan = { 32451, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_Master);
+      bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+      if (!NODE_Master) {
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 2543) {
+      paket_pesan pesan = { 25431, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_Master);
+      bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+      if (!NODE_Master) {
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 2534) {
+      paket_pesan pesan = { 25341, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_Master);
+      bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+      if (!NODE_Master) {
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 2453) {
+      paket_pesan pesan = { 24531, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_Master);
+      bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+      if (!NODE_Master) {
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 2435) {
+      paket_pesan pesan = { 24351, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_Master);
+      bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+      if (!NODE_Master) {
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 2354) {
+      paket_pesan pesan = { 23541, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_Master);
+      bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+      if (!NODE_Master) {
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    if (pesan.ID == 2345) {
+      paket_pesan pesan = { 23451, suhu, kelembapan, now.unixtime(), berat, unix2, pitch, roll, frekuensi, unix3, tofx, tofy, tofz, unix4, usx, usy, usz, unix5 };
+      RF24NetworkHeader header(/*to node*/ NODE_Master);
+      bool NODE_Master = network.write(header, &pesan, sizeof(pesan));
+      Serial.println(NODE_Master ? F("DATA TERKIRIM KE NODE Master") : F("GAGAL TERKIRIM KE NODE Master"));
+      if (!NODE_Master) {
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+      }
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+
   }
   //pBLEScan->clearResults();   // delete results fromBLEScan buffer to release memory
 }

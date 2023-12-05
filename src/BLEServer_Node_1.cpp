@@ -1,5 +1,8 @@
 #include <Arduino.h>
 
+//library DHT
+#include "DHT.h"
+
 //library RTC
 #include <Wire.h>
 #include "RTClib.h"
@@ -27,14 +30,18 @@ RF24Network network(radio); // Network uses that radio
 RF24Mesh mesh(radio, network);
 uint8_t dataBuffer[MAX_PAYLOAD_SIZE];  //MAX_PAYLOAD_SIZE is defined in RF24Network_config.h
 
+//konfigurasi DHT
+#define DHTPIN 13
+#define DHTTYPE DHT11
+DHT dht(DHTPIN, DHTTYPE);
+
 //alamat node
 #define this_node 1
 
-
 //variabel DATA
 int node_asal = 1; //data node
-unsigned long suhu = 12;  //data suhu
-unsigned long kelembapan = 90; //data kelembapan
+float suhu;  //data suhu
+float kelembapan; //data kelembapan
 String datakirim; //data Json yang akan dikirim
 
 //variabel millis
@@ -70,6 +77,8 @@ void setup() {
   //    1,
   //    &Task1,
   //    0);
+
+  dht.begin();
 
   if (! rtc.begin()) {
     Serial.println("Tidak dapat menemukan RTC! Periksa sirkuit.");
@@ -113,21 +122,25 @@ void loop() {
 
   mesh.update();
   DateTime now = rtc.now();
-  StaticJsonDocument<96> doc; // Json Document
+  StaticJsonDocument<128> doc; // Json Document
+
+  suhu = dht.readTemperature();
+  kelembapan = dht.readHumidity();
 
   // Mengirim data ke master
   if (millis() - currentMillis >= 1000) {
     currentMillis = millis();
-    doc["NodeID"] = node_asal;
-    doc["Suhu"] = suhu;
-    doc["Kelembapan"] = kelembapan;
-    doc["Unixtime"] = now.unixtime();
+    doc["NodeID"] = String(node_asal);
+    doc["Suhu"] = String(suhu);
+    doc["Kelembapan"] = String(kelembapan);
+    doc["Unixtime"] = String(now.unixtime());
     datakirim = "";
     serializeJson(doc, datakirim);
+    Serial.println(datakirim);
     char kirim_loop[datakirim.length() + 1];
     datakirim.toCharArray(kirim_loop, sizeof(kirim_loop));
 
-    if (!mesh.write(&kirim_loop, 'M', sizeof(kirim_loop))) {
+    if (!mesh.write(&kirim_loop, '1', sizeof(kirim_loop))) {
       if (!mesh.checkConnection()) {
         Serial.println("Memperbaharui Alamat");
         if (mesh.renewAddress() == MESH_DEFAULT_ADDRESS) {

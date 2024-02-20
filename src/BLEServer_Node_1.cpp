@@ -259,6 +259,10 @@ void loop() {
   }
   while (newdata == true){
     radio.stopListening();
+    NODE_2_RSSI = -999;
+    NODE_3_RSSI = -999;
+    NODE_4_RSSI = -999;
+    NODE_5_RSSI = -999;
     BLEScanResults foundDevices = pBLEScan->start(scanTime, false);
     if(NODE_2_RSSI != -999){
       NODE_2_STATUS = true;
